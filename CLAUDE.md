@@ -123,8 +123,9 @@ Next.js `middleware.ts` でJWT検証 → ロールに応じてルーティング
 
 ### LLM（Ollama）の用途
 
-- `gemma2`: 通知文生成、自然言語クエリ応答
+- `qwen2.5:3b`: 通知文生成、自然言語クエリ応答（日本語対応、ローカル軽量モデル）
 - `nomic-embed-text`: 商品・顧客のEmbedding生成（pgvectorで類似検索）
+- ※ 本番（Bedrock）では llama4 を想定。抽象化レイヤー経由で切り替え可能にする。
 - LLMクライアントは抽象化レイヤー経由で呼び出す（将来のBedrock切り替えを想定）
 
 ## Synthetic Dataの設計方針

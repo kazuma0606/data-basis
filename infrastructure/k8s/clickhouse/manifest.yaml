@@ -122,8 +122,8 @@ spec:
     - name: http
       port: 8123
       targetPort: 8123
-      nodePort: 38123
+      nodePort: 30823
     - name: native
       port: 9000
       targetPort: 9000
-      nodePort: 39000
+      nodePort: 30900
