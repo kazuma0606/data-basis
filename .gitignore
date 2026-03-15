@@ -1,0 +1,3 @@
+verification/*.db
+verification/uv.lock
+verification/src/__pycache__/

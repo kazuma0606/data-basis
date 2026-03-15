@@ -12,19 +12,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 data-basis/
-  infrastructure/
-    plan/             # インフラ設計ドキュメント
-    terraform/        # LocalStack provider によるIaC
-    k8s/              # Kubernetesマニフェスト
-    kafka/            # Kafkaトピック・コネクタ設定
-    data/             # Synthetic Data（VMと共有またはrsync）
-    scripts/          # データ生成・初期投入スクリプト
-  application/
-    plan/             # アプリケーション設計ドキュメント
-    frontend/         # Next.js + ShadCN
-    backend/          # FastAPI + SQLAlchemy
-    example/          # v0.appで作成したデザインモック
+  plan/                 # プロジェクト全体の要件・設計ドキュメント
+  infrastructure/       # インフラコード（Terraform / k8s / Kafka設定）
+    terraform/          # LocalStack provider によるIaC
+    k8s/                # Kubernetesマニフェスト
+    kafka/              # Kafkaトピック・コネクタ設定
+    data/               # Synthetic Data（VMと共有またはrsync）
+    scripts/            # データ生成・初期投入スクリプト
+  application/          # アプリケーションコード
+    frontend/           # Next.js + ShadCN
+    backend/            # FastAPI + SQLAlchemy
+    example/            # v0.appで作成したデザインモック
+  verification/         # ローカル検証（SQLiteベース）
 ```
+
+## verification/ の使い方
+
+Synthetic Dataの動作確認用。SQLiteで汚れたデータを生成し、名寄せ・クレンジングパイプラインの検証に使う。
+
+```bash
+cd verification
+uv run python generate.py            # 500人分のデータ生成（デフォルト）
+uv run python generate.py --count 1000  # 人数を指定
+uv run python verify.py              # 汚れデータの検証レポート表示
+```
+
+Windows での文字コード問題は generate.py / verify.py 内で自動処理済み（`sys.stdout.reconfigure`）。
 
 ## 環境
 
@@ -102,7 +115,7 @@ Next.js `middleware.ts` でJWT検証 → ロールに応じてルーティング
 
 **Opsダッシュボード** (`/ops/`) — エンジニア・IT部門向け
 - Kafka監視、パイプライン実行状況、スコアリングバッチ状況、スキーマ参照
-- デザインはapplication/exampleのモックに準拠
+- デザインは `application/example/` のモックに準拠
 
 **ビジネスダッシュボード** (`/business/`) — マーケ・店長向け
 - 顧客セグメント分析、カテゴリ親和性、顧客詳細（チャネル横断）、自然言語クエリ（Ollama）
@@ -113,23 +126,23 @@ Next.js `middleware.ts` でJWT検証 → ロールに応じてルーティング
 - `nomic-embed-text`: 商品・顧客のEmbedding生成（pgvectorで類似検索）
 - LLMクライアントは抽象化レイヤー経由で呼び出す（将来のBedrock切り替えを想定）
 
-## Synthetic Dataの方針
+## Synthetic Dataの設計方針
 
-リアリティのために意図的に「汚れ」を入れる：
-- 同一人物が EC / POS / アプリに別IDで存在（名寄せ対象）
-- 電話番号・住所・氏名のフォーマットばらつき、和暦と西暦の混在
+リアリティのために意図的に「汚れ」を入れる（`verification/` で検証済み）：
+- 同一人物が EC / POS / アプリに別IDで存在（名寄せ対象、500人中254人）
+- 電話番号フォーマットが5種類混在（標準・ハイフンなし・+81・suffix付き・欠損）
+- POSの生年月日は和暦（S55, H15, R3）、ECは西暦
+- 都道府県が正式名称・略称・数字コードで混在
 - 20万件中アクティブは約4万人、残りは休眠・チャーン・退会漏れ
-- 商品コードはECとPOSで体系が異なる（基幹マスタが正）
+- 商品コードはECとPOSで体系が異なる（`EC0001` vs `POS-C0001`）
 
 データは `infrastructure/data/` に置き、VMとの共有またはrsyncで同期する。
 
 ## 設計ドキュメント
 
-詳細は以下を参照：
-
-- `infrastructure/plan/company.md` — 発注元（テクノマート）の背景・制約
-- `infrastructure/plan/user_story.md` — ユーザーストーリー・スコアリング設計
-- `infrastructure/plan/data_problems.md` — 既存データの問題点
-- `infrastructure/plan/architecture.md` — インフラ全体構成
-- `infrastructure/plan/data_schema.md` — テーブル設計・Kafkaトピック対応
+- `plan/company.md` — 発注元（テクノマート）の背景・制約
+- `plan/user_story.md` — ユーザーストーリー・スコアリング設計
+- `plan/data_problems.md` — 既存データの問題点
+- `plan/architecture.md` — インフラ全体構成
+- `plan/data_schema.md` — テーブル設計・Kafkaトピック対応
 - `application/plan/app_requirements.md` — ダッシュボード・API・認証設計
