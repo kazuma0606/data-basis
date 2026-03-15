@@ -1,0 +1,20 @@
+# bitnami/redis - スタンドアロン（レプリカなし）
+architecture: standalone
+
+auth:
+  enabled: false  # ローカル開発環境のため無効
+
+master:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+  persistence:
+    size: 2Gi
+  service:
+    type: NodePort
+    nodePorts:
+      redis: 36379

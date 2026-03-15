@@ -1,0 +1,60 @@
+# bitnami/kafka - KRaft モード（Zookeeper 不要）、シングルノード
+replicaCount: 1
+
+kraft:
+  enabled: true
+
+listeners:
+  client:
+    protocol: PLAINTEXT
+  controller:
+    protocol: PLAINTEXT
+  interbroker:
+    protocol: PLAINTEXT
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+persistence:
+  size: 10Gi
+
+# Kafka トピックの事前作成
+provisioning:
+  enabled: true
+  topics:
+    - name: ec.events
+      partitions: 3
+      replicationFactor: 1
+      config:
+        retention.ms: "604800000"   # 7日
+    - name: pos.transactions
+      partitions: 3
+      replicationFactor: 1
+      config:
+        retention.ms: "604800000"
+    - name: app.behaviors
+      partitions: 3
+      replicationFactor: 1
+      config:
+        retention.ms: "604800000"
+    - name: inventory.updates
+      partitions: 1
+      replicationFactor: 1
+      config:
+        retention.ms: "604800000"
+    - name: customer.scores
+      partitions: 1
+      replicationFactor: 1
+      config:
+        retention.ms: "86400000"    # 1日
+
+# NodePort でホストから直接アクセス（192.168.56.10:32092）
+service:
+  type: NodePort
+  nodePorts:
+    client: 32092

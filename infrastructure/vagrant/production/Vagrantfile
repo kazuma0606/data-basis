@@ -2,12 +2,11 @@
 # 用途: k8s + Kafka + LocalStack + PostgreSQL + ClickHouse + Redis + Ollama
 #
 # 使い方:
-#   vagrant up          # VM 起動
-#   vagrant ssh         # SSH ログイン
-#   vagrant halt        # VM 停止
-#   vagrant destroy     # VM 削除
-#
-# NOTE: この構成は未実装。minimal/ で動作確認後にここを充実させる。
+#   vagrant up                      # VM 起動・プロビジョニング
+#   vagrant ssh                     # SSH ログイン
+#   /technomart/infrastructure/scripts/deploy.sh   # サービスデプロイ（VM内で実行）
+#   vagrant halt                    # VM 停止
+#   vagrant destroy                 # VM 削除
 
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"  # Ubuntu 24.04 LTS
@@ -26,13 +25,9 @@ Vagrant.configure("2") do |config|
     vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
   end
 
-  # TODO: プロビジョニング（k3s, Helm, Docker 等）をここに追加
-  config.vm.provision "shell", inline: <<-SHELL
-    apt-get update -qq
-    apt-get install -y -qq curl git unzip
+  # リポジトリ全体を VM 内に共有（ホストで編集 → VM に即時反映）
+  config.vm.synced_folder "../../../", "/technomart"
 
-    echo "=== VM セットアップ完了 ==="
-    echo "IP: $(hostname -I | awk '{print $2}')"
-    uname -a
-  SHELL
+  # プロビジョニング（k3s + Helm のインストール）
+  config.vm.provision "shell", path: "scripts/provision.sh"
 end
