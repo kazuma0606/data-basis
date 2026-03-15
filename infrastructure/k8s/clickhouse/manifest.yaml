@@ -1,0 +1,129 @@
+# ClickHouse - 分析DB
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse-pvc
+  namespace: technomart
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 30Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-init
+  namespace: technomart
+data:
+  init.sql: |
+    -- ClickHouse 分析テーブル初期化
+    CREATE DATABASE IF NOT EXISTS technomart;
+
+    -- EC イベントログ（S3から日次ロード）
+    CREATE TABLE IF NOT EXISTS technomart.ec_events (
+      event_id      String,
+      customer_id   String,
+      event_type    String,   -- 'view', 'cart', 'purchase'
+      product_id    String,
+      amount        Nullable(Float64),
+      event_date    Date,
+      event_time    DateTime
+    ) ENGINE = MergeTree()
+    ORDER BY (event_date, customer_id);
+
+    -- POS 購買データ（S3から日次ロード）
+    CREATE TABLE IF NOT EXISTS technomart.pos_transactions (
+      txn_id        String,
+      customer_id   String,
+      store_id      String,
+      product_id    String,
+      quantity      Int32,
+      amount        Float64,
+      txn_date      Date,
+      txn_time      DateTime
+    ) ENGINE = MergeTree()
+    ORDER BY (txn_date, store_id, customer_id);
+
+    -- 顧客スコアサマリ（日次集計）
+    CREATE TABLE IF NOT EXISTS technomart.customer_scores_daily (
+      unified_id          String,
+      score_date          Date,
+      category_affinity   Map(String, Float64),
+      churn_risk          Float64,
+      purchase_timing     Float64,
+      visit_prediction    Float64
+    ) ENGINE = MergeTree()
+    ORDER BY (score_date, unified_id);
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse
+  namespace: technomart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:24.8
+          env:
+            - name: CLICKHOUSE_DB
+              value: technomart
+            - name: CLICKHOUSE_USER
+              value: technomart
+            - name: CLICKHOUSE_PASSWORD
+              value: technomart
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+              value: "1"
+          ports:
+            - containerPort: 8123   # HTTP
+            - containerPort: 9000   # native
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: clickhouse-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: technomart
+spec:
+  type: NodePort
+  selector:
+    app: clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+      nodePort: 38123
+    - name: native
+      port: 9000
+      targetPort: 9000
+      nodePort: 39000

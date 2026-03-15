@@ -13,8 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 data-basis/
   plan/                 # プロジェクト全体の要件・設計ドキュメント
-  infrastructure/       # インフラコード（Terraform / k8s / Kafka設定）
-    terraform/          # LocalStack provider によるIaC
+  infrastructure/       # インフラコード
+    vagrant/            # VM管理（Vagrantfile）← VM起動はここ
+    terraform/          # 将来：VM内サービスプロビジョニング用（現在は未使用）
     k8s/                # Kubernetesマニフェスト
     kafka/              # Kafkaトピック・コネクタ設定
     data/               # Synthetic Data（VMと共有またはrsync）
