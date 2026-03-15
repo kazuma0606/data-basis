@@ -20,6 +20,7 @@ metadata:
   namespace: technomart
 spec:
   replicas: 1
+  progressDeadlineSeconds: 1200  # イメージが大きいため余裕を持たせる
   selector:
     matchLabels:
       app: ollama

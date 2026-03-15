@@ -12,13 +12,13 @@ echo "======================================================"
 
 # ── [1/4] 基本ツール ──────────────────────────────────────
 echo ""
-echo "[1/4] 基本ツールのインストール..."
+echo "[1/3] 基本ツールのインストール..."
 apt-get update -qq
 apt-get install -y -qq curl git unzip jq
 
 # ── [2/4] k3s インストール ────────────────────────────────
 echo ""
-echo "[2/4] k3s インストール中..."
+echo "[2/3] k3s インストール中..."
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik --write-kubeconfig-mode 644" sh -
 
 echo "k3s 起動待ち..."
@@ -29,7 +29,7 @@ echo "k3s 起動完了: $(kubectl get nodes --no-headers | awk '{print $1, $2}')
 
 # ── [3/4] kubeconfig セットアップ ─────────────────────────
 echo ""
-echo "[3/4] kubeconfig セットアップ..."
+echo "[3/3] kubeconfig セットアップ..."
 mkdir -p /home/vagrant/.kube
 cp /etc/rancher/k3s/k3s.yaml /home/vagrant/.kube/config
 chown -R vagrant:vagrant /home/vagrant/.kube
@@ -42,17 +42,6 @@ export KUBECONFIG=/home/vagrant/.kube/config
 alias k=kubectl
 alias kn='kubectl -n technomart'
 BASHRC
-
-# ── [4/4] Helm インストール ───────────────────────────────
-echo ""
-echo "[4/4] Helm インストール中..."
-curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-# Helm リポジトリ（vagrant ユーザーとして実行）
-sudo -u vagrant -E KUBECONFIG=/home/vagrant/.kube/config bash -c "
-  helm repo add bitnami https://charts.bitnami.com/bitnami
-  helm repo update
-"
 
 echo ""
 echo "======================================================"

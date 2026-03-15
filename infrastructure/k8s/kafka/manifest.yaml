@@ -1,0 +1,186 @@
+# Kafka - KRaft モード（Zookeeper 不要）、シングルノード
+# イメージ: apache/kafka（公式）
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-pvc
+  namespace: technomart
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-config
+  namespace: technomart
+data:
+  server.properties: |
+    # KRaft モード設定（シングルノード: broker + controller 兼用）
+    process.roles=broker,controller
+    node.id=1
+    controller.quorum.voters=1@localhost:9093
+
+    # リスナー設定
+    listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+    advertised.listeners=PLAINTEXT://kafka.technomart.svc.cluster.local:9092
+    inter.broker.listener.name=PLAINTEXT
+    controller.listener.names=CONTROLLER
+    listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+
+    # ログディレクトリ
+    log.dirs=/opt/kafka/data
+
+    # トピックのデフォルト設定
+    num.partitions=3
+    default.replication.factor=1
+    offsets.topic.replication.factor=1
+    transaction.state.log.replication.factor=1
+    transaction.state.log.min.isr=1
+
+    # 保持期間
+    log.retention.hours=168
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: technomart
+spec:
+  serviceName: kafka
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      initContainers:
+        # KRaft クラスタ ID を初期化（初回のみ）
+        - name: kafka-init
+          image: apache/kafka:3.9.0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              if [ ! -f /opt/kafka/data/meta.properties ]; then
+                echo "KRaft ストレージを初期化中..."
+                CLUSTER_ID=$(/opt/kafka/bin/kafka-storage.sh random-uuid)
+                /opt/kafka/bin/kafka-storage.sh format \
+                  --cluster-id $CLUSTER_ID \
+                  --config /opt/kafka/config/server.properties
+                echo "初期化完了: $CLUSTER_ID"
+              else
+                echo "既存のストレージを使用"
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /opt/kafka/data
+            - name: config
+              mountPath: /opt/kafka/config/server.properties
+              subPath: server.properties
+      containers:
+        - name: kafka
+          image: apache/kafka:3.9.0
+          command:
+            - /opt/kafka/bin/kafka-server-start.sh
+            - /opt/kafka/config/server.properties
+          ports:
+            - name: client
+              containerPort: 9092
+            - name: controller
+              containerPort: 9093
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /opt/kafka/data
+            - name: config
+              mountPath: /opt/kafka/config/server.properties
+              subPath: server.properties
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kafka-pvc
+        - name: config
+          configMap:
+            name: kafka-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: technomart
+spec:
+  type: NodePort
+  selector:
+    app: kafka
+  ports:
+    - name: client
+      port: 9092
+      targetPort: 9092
+      nodePort: 32092
+---
+# トピック作成 Job（Kafka 起動後に1回だけ実行）
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-topics-init
+  namespace: technomart
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-topics-init
+          image: apache/kafka:3.9.0
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              BOOTSTRAP=kafka.technomart.svc.cluster.local:9092
+
+              echo "Kafka 起動待ち..."
+              until /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP --list 2>/dev/null; do
+                sleep 5
+              done
+              echo "Kafka 接続OK"
+
+              create_topic() {
+                local topic=$1 partitions=$2 retention_ms=$3
+                if /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP --describe --topic $topic 2>/dev/null | grep -q "Topic:"; then
+                  echo "存在済み: $topic"
+                else
+                  /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP --create \
+                    --topic $topic --partitions $partitions --replication-factor 1 \
+                    --config retention.ms=$retention_ms
+                  echo "作成: $topic"
+                fi
+              }
+
+              create_topic ec.events          3 604800000
+              create_topic pos.transactions   3 604800000
+              create_topic app.behaviors      3 604800000
+              create_topic inventory.updates  1 604800000
+              create_topic customer.scores    1 86400000
+
+              echo "--- 全トピック ---"
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server $BOOTSTRAP --list

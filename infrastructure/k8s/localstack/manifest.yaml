@@ -59,4 +59,4 @@ spec:
   ports:
     - port: 4566
       targetPort: 4566
-      nodePort: 34566
+      nodePort: 31566
