@@ -10,5 +10,6 @@ infrastructure/terraform/terraform.tfvars
 infrastructure/terraform/.terraform.lock.hcl
 
 # Vagrant
+infrastructure/vagrant/.vagrant/
 infrastructure/vagrant/minimal/.vagrant/
 infrastructure/vagrant/production/.vagrant/
