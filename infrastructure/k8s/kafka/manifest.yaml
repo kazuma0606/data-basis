@@ -27,7 +27,7 @@ data:
 
     # リスナー設定
     listeners=PLAINTEXT://:9092,CONTROLLER://:9093
-    advertised.listeners=PLAINTEXT://kafka.technomart.svc.cluster.local:9092
+    advertised.listeners=PLAINTEXT://192.168.56.10:32092
     inter.broker.listener.name=PLAINTEXT
     controller.listener.names=CONTROLLER
     listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT

@@ -17,16 +17,19 @@ echo " テクノマート 初期データ投入"
 echo " 顧客数: ${CUSTOMERS}人 / データ出力先: ${DATA_DIR}"
 echo "======================================================"
 
-cd "$PIPELINE_DIR"
+VENV_DIR="/tmp/technomart_venv"
 
 # ── 依存ライブラリのインストール ──────────────────────
+# 共有フォルダ上はシンボリックリンクが使えないため /tmp に venv を作成
 echo ""
 echo "[0/5] Python 環境セットアップ..."
-if [ ! -d ".venv" ]; then
-  python3 -m venv .venv
+if [ ! -d "$VENV_DIR" ]; then
+  python3 -m venv "$VENV_DIR"
 fi
-source .venv/bin/activate
-pip install -q -r requirements.txt
+source "$VENV_DIR/bin/activate"
+pip install -q -r "$PIPELINE_DIR/requirements.txt"
+
+cd "$PIPELINE_DIR"
 
 # ── [1/5] CSV データ生成 ──────────────────────────────
 echo ""

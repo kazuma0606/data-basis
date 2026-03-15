@@ -78,9 +78,9 @@ def main():
     # ── inventory.updates（店舗別ダミー在庫変動）─────────
     print("[kafka] inventory.updates プロデュース中...")
     import random
-    from src.master_data import PRODUCTS, STORES
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent.parent / "verification"))
+    from src.master_data import PRODUCTS, STORES
     inventory_rows = []
     for store in STORES:
         for product in PRODUCTS:
