@@ -57,8 +57,9 @@ aws_secret_access_key: test
 ```
 base_url: http://192.168.56.10:31434
 models:
-  - nomic-embed-text  # Embedding生成（768次元）
-  - gemma2            # テキスト生成・自然言語クエリ
+  - nomic-embed-text  # Embedding生成（768次元、274MB）
+  - qwen2.5:3b        # テキスト生成・自然言語クエリ（日本語対応、1.9GB）
+# ※ llama4はVirtualBox CPU環境では非実用的なサイズ（67GB）。本番はBedrock(llama4)を想定。
 ```
 
 ### Kafka
