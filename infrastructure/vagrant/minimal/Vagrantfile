@@ -1,0 +1,37 @@
+# テクノマート データ基盤 - Ubuntu 24.04 LTS VM
+# 用途: ローカルで AWS 環境を縮小再現（k8s + Kafka + LocalStack）
+#
+# 使い方:
+#   vagrant up          # VM 起動（初回はボックスをダウンロード）
+#   vagrant ssh         # SSH ログイン
+#   vagrant halt        # VM 停止
+#   vagrant destroy     # VM 削除
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-24.04"  # Ubuntu 24.04 LTS
+
+  config.vm.hostname = "technomart"
+
+  # Host-Only ネットワーク（ホストから固定 IP でアクセス）
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # VirtualBox プロバイダー設定
+  config.vm.provider "virtualbox" do |vb|
+    vb.name   = "technomart-ubuntu"
+    vb.cpus   = 2
+    vb.memory = 4096
+
+    # ネストされた仮想化（k8s 用）
+    vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+  end
+
+  # 初期セットアップ
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update -qq
+    apt-get install -y -qq curl git unzip
+
+    echo "=== VM セットアップ完了 ==="
+    echo "IP: $(hostname -I | awk '{print $2}')"
+    uname -a
+  SHELL
+end
