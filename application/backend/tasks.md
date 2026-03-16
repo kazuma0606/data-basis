@@ -182,15 +182,15 @@ JWT_EXPIRE_MINUTES=480
 | タスク | 内容 | 状態 |
 |---|---|---|
 | 6-1 | `application/backend/Dockerfile` — マルチステージビルド（builder: 依存インストール / runtime: 最小イメージ）。uvicorn で起動 | [x] |
-| 6-2 | `application/frontend/Dockerfile` — Next.js の standalone ビルドを使用したマルチステージビルド | [x] |
+| 6-2 | `application/frontend/Dockerfile` — Next.js の standalone ビルドを使用したマルチステージビルド | → frontend実装時 |
 | 6-3 | `application/backend/.env.example` をリポジトリにコミット。`.env` 本体は `.gitignore` で除外 | [x] |
-| 6-4 | `infrastructure/k8s/backend/manifest.yaml` — Deployment（レプリカ1）+ ClusterIP Service + ConfigMap（非機密設定）+ Secret（DB接続情報・JWT秘密鍵） | [x] |
-| 6-5 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort Service（フロントエンドはブラウザから直接アクセスするため NodePort） | [x] |
-| 6-6 | `infrastructure/k8s/backend/manifest.yaml` に `BACKEND_URL` 等の環境変数を Secret / ConfigMap から注入する設定を追加 | [x] |
-| 6-7 | `infrastructure/scripts/deploy.sh` にバックエンド・フロントエンドの apply を追記 | [x] |
-| 6-8 | VM上でイメージビルド（`docker build`）→ k3s のローカルレジストリへのインポート（`k3s ctr images import`）手順を確認・実施 | [x] |
-| 6-9 | `kubectl rollout status` で backend / frontend の起動を確認。`/healthz` エンドポイントで疎通確認 | [x] |
-| 6-10 | `infrastructure/NETWORK.md` にバックエンド・フロントエンドのポート情報を追記 | [x] |
+| 6-4 | `infrastructure/k8s/backend/manifest.yaml` — Deployment（レプリカ1）+ NodePort Service + ConfigMap（非機密設定）+ Secret（DB接続情報・JWT秘密鍵） | [x] |
+| 6-5 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort Service | → frontend実装時 |
+| 6-6 | `infrastructure/k8s/backend/manifest.yaml` に環境変数を Secret / ConfigMap から注入する設定を追加 | [x] |
+| 6-7 | `infrastructure/scripts/deploy.sh` にバックエンドの apply を追記（フロントエンドは frontend 実装時） | [x] |
+| 6-8 | VM上でイメージビルド（`docker build`）→ k3s のローカルレジストリへのインポート — `deploy.sh` 実行で対応 | [x] |
+| 6-9 | `kubectl rollout status` で backend 起動確認・`/healthz` 疎通確認 — `deploy.sh` 実行で対応 | [x] |
+| 6-10 | `infrastructure/NETWORK.md` にバックエンド・k3s内部DNSのポート情報を追記 | [x] |
 
 ### ポート割り当て（予定）
 

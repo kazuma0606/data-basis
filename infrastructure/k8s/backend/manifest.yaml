@@ -1,0 +1,110 @@
+# FastAPI バックエンド
+# 機密情報は Secret、非機密設定は ConfigMap から注入する
+# ローカル(k3s): k8s内部DNS でミドルウェアに接続
+# 本番(EKS):    Secret/ConfigMap の値を差し替えるだけで移行可能
+---
+# ── ConfigMap: 非機密設定 ──────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: technomart
+data:
+  POSTGRES_HOST: "postgresql.technomart.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "technomart"
+  POSTGRES_USER: "technomart"
+  CLICKHOUSE_HOST: "clickhouse.technomart.svc.cluster.local"
+  CLICKHOUSE_PORT: "8123"
+  CLICKHOUSE_DB: "technomart"
+  CLICKHOUSE_USER: "technomart"
+  REDIS_URL: "redis://redis.technomart.svc.cluster.local:6379/0"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.technomart.svc.cluster.local:9092"
+  OLLAMA_BASE_URL: "http://ollama.technomart.svc.cluster.local:11434"
+  S3_ENDPOINT_URL: "http://localstack.technomart.svc.cluster.local:4566"
+  S3_BUCKET: "technomart-datalake"
+  AWS_DEFAULT_REGION: "ap-northeast-1"
+  JWT_ALGORITHM: "HS256"
+  JWT_EXPIRE_MINUTES: "480"
+---
+# ── Secret: 機密情報 ───────────────────────────────────────────
+# 本番では kubectl create secret generic backend-secret \
+#   --from-literal=POSTGRES_PASSWORD=<value> \
+#   --from-literal=CLICKHOUSE_PASSWORD=<value> \
+#   --from-literal=JWT_SECRET_KEY=$(openssl rand -hex 32) \
+#   -n technomart
+# ローカル開発用のダミー値（本番では上記コマンドで上書きする）
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  namespace: technomart
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "technomart"
+  CLICKHOUSE_PASSWORD: "technomart"
+  JWT_SECRET_KEY: "change-me-generate-with-openssl-rand-hex-32"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+---
+# ── Deployment ─────────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: technomart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: technomart-backend:latest
+          imagePullPolicy: Never  # k3s ローカルインポート済みイメージを使用
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: backend-config
+            - secretRef:
+                name: backend-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+---
+# ── Service: ClusterIP（内部アクセス用） + NodePort（外部アクセス用） ──
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: technomart
+spec:
+  type: NodePort
+  selector:
+    app: backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800

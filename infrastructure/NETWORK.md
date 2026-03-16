@@ -73,9 +73,28 @@ topics:
   - customer.scores    (partitions: 1, retention: 1日)
 ```
 
-## 将来追加予定（アプリケーション）
+## アプリケーション
 
-| サービス | NodePort（予定） | アクセス先（予定） |
-|---|---|---|
-| FastAPI | 30800 | `http://192.168.56.10:30800` |
-| Next.js | 30300 | `http://192.168.56.10:30300` |
+| サービス | イメージ | NodePort | アクセス先 |
+|---|---|---|---|
+| Backend (FastAPI) | `technomart-backend:latest` | 30800 | `http://192.168.56.10:30800` |
+| Frontend (Next.js) | `technomart-frontend:latest`（未デプロイ） | 30300 | `http://192.168.56.10:30300` |
+
+### Backend API
+
+```
+base_url:  http://192.168.56.10:30800
+docs:      http://192.168.56.10:30800/docs
+healthz:   http://192.168.56.10:30800/healthz
+```
+
+### k3s 内部 DNS（Pod 間通信）
+
+| サービス | 内部アドレス |
+|---|---|
+| PostgreSQL | `postgresql.technomart.svc.cluster.local:5432` |
+| ClickHouse | `clickhouse.technomart.svc.cluster.local:8123` |
+| Redis | `redis.technomart.svc.cluster.local:6379` |
+| Kafka | `kafka.technomart.svc.cluster.local:9092` |
+| Ollama | `ollama.technomart.svc.cluster.local:11434` |
+| LocalStack | `localstack.technomart.svc.cluster.local:4566` |
