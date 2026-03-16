@@ -124,10 +124,10 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 2-1 | `app/auth/login/page.tsx` — ログインフォーム（username/password・react-hook-form + zod）・エラー表示 | [ ] |
-| 2-2 | ログイン成功後のロール別リダイレクト（engineer → /ops/overview、marketer → /business/summary） | [ ] |
-| 2-3 | `tests/component/LoginForm.test.tsx` — フォームレンダリング・バリデーション・APIエラー表示の検証 | [ ] |
-| 2-4 | `tests/e2e/auth.spec.ts` — 実バックエンドに対してログイン成功・失敗・ロール別リダイレクト・ログアウト | [ ] |
+| 2-1 | `app/auth/login/page.tsx` — ログインフォーム（username/password・react-hook-form + zod）・エラー表示 | [x] |
+| 2-2 | ログイン成功後のロール別リダイレクト（engineer → /ops/overview、marketer → /business/summary） | [x] |
+| 2-3 | `tests/component/LoginForm.test.tsx` — フォームレンダリング・バリデーション・APIエラー表示の検証 | [x] |
+| 2-4 | `tests/e2e/auth.spec.ts` — 実バックエンドに対してログイン成功・失敗・ロール別リダイレクト・ログアウト | [x] |
 
 ---
 

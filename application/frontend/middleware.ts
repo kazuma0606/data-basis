@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authProvider } from "./lib/auth";
 import { SESSION_COOKIE } from "./lib/auth/session";
+import { ROLE_HOME } from "./lib/auth/routes";
 import type { Role } from "./lib/auth/types";
-
-// Routes that are accessible without authentication
-const PUBLIC_PATHS = ["/auth/login", "/api/auth/signin"];
 
 // Role → allowed path prefix
 const ROLE_PATHS: Record<Role, string[]> = {
@@ -14,25 +12,34 @@ const ROLE_PATHS: Record<Role, string[]> = {
   admin: ["/ops", "/business"],
 };
 
-// Default redirect per role after login
-export const ROLE_HOME: Record<Role, string> = {
-  engineer: "/ops/overview",
-  marketer: "/business/summary",
-  store_manager: "/business/summary",
-  admin: "/ops/overview",
-};
+// Re-export for use in tests
+export { ROLE_HOME };
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths and Next.js internals
+  // Allow Next.js internals and API auth routes (except signin check below)
   if (
-    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth/signout") ||
     pathname.startsWith("/api/auth/me") ||
     pathname === "/"
   ) {
+    return NextResponse.next();
+  }
+
+  // For /auth/login: redirect already-authenticated users to their home
+  if (pathname.startsWith("/auth/login") || pathname.startsWith("/api/auth/signin")) {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    if (token) {
+      const user = await authProvider.verifyToken(token);
+      if (user) {
+        const homeUrl = req.nextUrl.clone();
+        homeUrl.pathname = ROLE_HOME[user.role];
+        homeUrl.search = "";
+        return NextResponse.redirect(homeUrl);
+      }
+    }
     return NextResponse.next();
   }
 
