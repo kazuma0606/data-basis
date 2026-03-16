@@ -11,7 +11,7 @@ class OllamaClient:
         self._base_url = base_url or settings.ollama_base_url
 
     async def generate(self, prompt: str) -> str:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
                 f"{self._base_url}/api/generate",
                 json={"model": _GENERATE_MODEL, "prompt": prompt, "stream": False},

@@ -28,6 +28,6 @@ async def ch_query(query: str, parameters: dict[str, Any] | None = None) -> list
     def _execute() -> list[dict[str, Any]]:
         client = _get_client()
         result = client.query(query, parameters=parameters)
-        return result.named_results()
+        return list(result.named_results())
 
     return await asyncio.to_thread(_execute)

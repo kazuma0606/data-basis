@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 
 export default async function SegmentsPage() {
   const [summaryRes, trendRes] = await Promise.allSettled([
-    apiFetch<SegmentSummary[]>("/business/analytics/segments"),
-    apiFetch<SegmentTrend[]>("/business/analytics/segments/trend"),
+    apiFetch<SegmentSummary[]>("/business/segments/summary"),
+    apiFetch<SegmentTrend[]>("/business/segments/trend"),
   ]);
 
   const summaryData = summaryRes.status === "fulfilled" ? summaryRes.value : [];
