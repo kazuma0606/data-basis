@@ -1,0 +1,259 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" font-family="'Segoe UI', sans-serif">
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#0f1117"/>
+
+  <!-- Title -->
+  <text x="600" y="38" text-anchor="middle" fill="#e2e8f0" font-size="20" font-weight="bold">テクノマート データ基盤 アーキテクチャ</text>
+  <text x="600" y="58" text-anchor="middle" fill="#64748b" font-size="12">Local (VirtualBox VM) — k3s on Ubuntu 24.04 / 10 core / 48GB RAM</text>
+
+  <!-- ===== k8s cluster boundary ===== -->
+  <rect x="220" y="170" width="760" height="630" rx="12" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="6,4"/>
+  <text x="228" y="188" fill="#475569" font-size="11">k8s (k3s) cluster — 192.168.56.10</text>
+
+  <!-- ===== LAYER 0: Data Sources ===== -->
+  <!-- box -->
+  <rect x="30" y="72" width="150" height="228" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="105" y="92" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">データソース</text>
+  <text x="105" y="106" text-anchor="middle" fill="#64748b" font-size="10">Synthetic Data</text>
+
+  <!-- source items -->
+  <rect x="42" y="112" width="126" height="26" rx="4" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="105" y="129" text-anchor="middle" fill="#93c5fd" font-size="10">ECシステム (MySQL)</text>
+
+  <rect x="42" y="144" width="126" height="26" rx="4" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="105" y="161" text-anchor="middle" fill="#93c5fd" font-size="10">POSシステム (SQL Server)</text>
+
+  <rect x="42" y="176" width="126" height="26" rx="4" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="105" y="193" text-anchor="middle" fill="#93c5fd" font-size="10">会員アプリ (PostgreSQL)</text>
+
+  <rect x="42" y="208" width="126" height="26" rx="4" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="105" y="225" text-anchor="middle" fill="#93c5fd" font-size="10">在庫・基幹 (CSV)</text>
+
+  <text x="105" y="260" text-anchor="middle" fill="#64748b" font-size="9">infrastructure/data/</text>
+  <text x="105" y="274" text-anchor="middle" fill="#64748b" font-size="9">synthetic *.parquet</text>
+  <text x="105" y="290" text-anchor="middle" fill="#475569" font-size="9">→ VM rsync</text>
+
+  <!-- Arrow: Sources → Kafka -->
+  <line x1="180" y1="186" x2="235" y2="300" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="188" y="245" fill="#64748b" font-size="9" transform="rotate(-30,188,245)">Kafka Connect</text>
+  <text x="188" y="257" fill="#64748b" font-size="9" transform="rotate(-30,188,257)">/ バッチ取込</text>
+
+  <!-- ===== LAYER 1: Kafka ===== -->
+  <rect x="234" y="196" width="200" height="182" rx="8" fill="#1e293b" stroke="#b45309" stroke-width="1.5"/>
+  <text x="334" y="216" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="bold">Kafka</text>
+  <text x="334" y="230" text-anchor="middle" fill="#92400e" font-size="10">KRaft mode  :32092</text>
+  <text x="334" y="244" text-anchor="middle" fill="#64748b" font-size="9">AWS: Amazon MSK</text>
+
+  <rect x="246" y="250" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="263" text-anchor="middle" fill="#fde68a" font-size="9">ec.events</text>
+
+  <rect x="246" y="272" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="285" text-anchor="middle" fill="#fde68a" font-size="9">pos.transactions</text>
+
+  <rect x="246" y="294" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="307" text-anchor="middle" fill="#fde68a" font-size="9">app.behaviors</text>
+
+  <rect x="246" y="316" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="329" text-anchor="middle" fill="#fde68a" font-size="9">inventory.updates</text>
+
+  <rect x="246" y="338" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="351" text-anchor="middle" fill="#fde68a" font-size="9">customer.scores</text>
+
+  <rect x="246" y="360" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="373" text-anchor="middle" fill="#fde68a" font-size="9">scoring.events</text>
+
+  <!-- ===== LAYER 2a: S3 (LocalStack) ===== -->
+  <rect x="480" y="196" width="180" height="130" rx="8" fill="#1e293b" stroke="#065f46" stroke-width="1.5"/>
+  <text x="570" y="216" text-anchor="middle" fill="#34d399" font-size="12" font-weight="bold">LocalStack S3</text>
+  <text x="570" y="230" text-anchor="middle" fill="#064e3b" font-size="10">:31566</text>
+  <text x="570" y="244" text-anchor="middle" fill="#64748b" font-size="9">AWS: Amazon S3</text>
+
+  <rect x="492" y="252" width="156" height="14" rx="2" fill="#0f172a" stroke="#047857" stroke-width="1"/>
+  <text x="570" y="263" text-anchor="middle" fill="#6ee7b7" font-size="8">technomart-datalake / raw/</text>
+
+  <rect x="492" y="270" width="156" height="14" rx="2" fill="#0f172a" stroke="#047857" stroke-width="1"/>
+  <text x="570" y="281" text-anchor="middle" fill="#6ee7b7" font-size="8">technomart-datalake / cleaned/</text>
+
+  <rect x="492" y="288" width="156" height="14" rx="2" fill="#0f172a" stroke="#047857" stroke-width="1"/>
+  <text x="570" y="299" text-anchor="middle" fill="#6ee7b7" font-size="8">technomart-datalake / aggregated/</text>
+
+  <text x="570" y="320" text-anchor="middle" fill="#475569" font-size="9">生データ全量保持（消さない）</text>
+
+  <!-- Arrow: Kafka → S3 -->
+  <line x1="434" y1="250" x2="478" y2="250" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== LAYER 2b: Scoring ===== -->
+  <rect x="480" y="346" width="180" height="90" rx="8" fill="#1e293b" stroke="#5b21b6" stroke-width="1.5"/>
+  <text x="570" y="366" text-anchor="middle" fill="#a78bfa" font-size="12" font-weight="bold">スコアリング</text>
+  <text x="570" y="380" text-anchor="middle" fill="#64748b" font-size="9">バッチ処理（日次/週次）</text>
+
+  <text x="492" y="400" fill="#c4b5fd" font-size="9">• カテゴリ親和性（日次）</text>
+  <text x="492" y="414" fill="#c4b5fd" font-size="9">• チャーンリスク（週次）</text>
+  <text x="492" y="428" fill="#c4b5fd" font-size="9">• 購買タイミング / 来店予測（週次）</text>
+
+  <!-- Arrow: Kafka → Scoring -->
+  <line x1="434" y1="330" x2="478" y2="370" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== LAYER 3: Serving ===== -->
+
+  <!-- PostgreSQL -->
+  <rect x="708" y="196" width="188" height="148" rx="8" fill="#1e293b" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="802" y="216" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="bold">PostgreSQL + pgvector</text>
+  <text x="802" y="230" text-anchor="middle" fill="#1e3a8a" font-size="10">:32432  db=technomart</text>
+  <text x="802" y="244" text-anchor="middle" fill="#64748b" font-size="9">AWS: RDS PostgreSQL</text>
+
+  <rect x="720" y="252" width="164" height="14" rx="2" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="802" y="263" text-anchor="middle" fill="#93c5fd" font-size="8">unified_customers（統合顧客マスタ）</text>
+
+  <rect x="720" y="270" width="164" height="14" rx="2" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="802" y="281" text-anchor="middle" fill="#93c5fd" font-size="8">customer_source_map</text>
+
+  <rect x="720" y="288" width="164" height="14" rx="2" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="802" y="299" text-anchor="middle" fill="#93c5fd" font-size="8">churn_labels</text>
+
+  <rect x="720" y="306" width="164" height="14" rx="2" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="802" y="317" text-anchor="middle" fill="#93c5fd" font-size="8">product_embeddings（pgvector）</text>
+
+  <rect x="720" y="324" width="164" height="14" rx="2" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="802" y="335" text-anchor="middle" fill="#93c5fd" font-size="8">customer_scores</text>
+
+  <!-- ClickHouse -->
+  <rect x="708" y="360" width="188" height="100" rx="8" fill="#1e293b" stroke="#c2410c" stroke-width="1.5"/>
+  <text x="802" y="380" text-anchor="middle" fill="#fb923c" font-size="12" font-weight="bold">ClickHouse</text>
+  <text x="802" y="394" text-anchor="middle" fill="#7c2d12" font-size="10">HTTP :30823 / native :30900</text>
+  <text x="802" y="408" text-anchor="middle" fill="#64748b" font-size="9">AWS: ClickHouse (EC2)</text>
+
+  <text x="720" y="428" fill="#fdba74" font-size="9">• sales_by_channel（売上集計）</text>
+  <text x="720" y="442" fill="#fdba74" font-size="9">• churn_summary_weekly</text>
+  <text x="720" y="456" fill="#fdba74" font-size="9">• category_affinity_summary</text>
+
+  <!-- Redis -->
+  <rect x="708" y="476" width="188" height="80" rx="8" fill="#1e293b" stroke="#b91c1c" stroke-width="1.5"/>
+  <text x="802" y="496" text-anchor="middle" fill="#f87171" font-size="12" font-weight="bold">Redis</text>
+  <text x="802" y="510" text-anchor="middle" fill="#7f1d1d" font-size="10">:32379</text>
+  <text x="802" y="524" text-anchor="middle" fill="#64748b" font-size="9">AWS: ElastiCache</text>
+  <text x="802" y="542" text-anchor="middle" fill="#fca5a5" font-size="9">スコアキャッシュ TTL 24h</text>
+
+  <!-- Arrows: S3 → PostgreSQL -->
+  <line x1="660" y1="240" x2="706" y2="260" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- S3 → ClickHouse (日次ロード) -->
+  <line x1="660" y1="280" x2="706" y2="390" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="670" y="345" fill="#64748b" font-size="8">日次ロード</text>
+
+  <!-- Scoring → PostgreSQL -->
+  <line x1="660" y1="380" x2="706" y2="330" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Scoring → Redis -->
+  <line x1="660" y1="400" x2="706" y2="506" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== LAYER 4: Application ===== -->
+
+  <!-- Ollama -->
+  <rect x="234" y="476" width="200" height="120" rx="8" fill="#1e293b" stroke="#854d0e" stroke-width="1.5"/>
+  <text x="334" y="496" text-anchor="middle" fill="#fcd34d" font-size="12" font-weight="bold">Ollama</text>
+  <text x="334" y="510" text-anchor="middle" fill="#713f12" font-size="10">:31434</text>
+  <text x="334" y="524" text-anchor="middle" fill="#64748b" font-size="9">AWS: Amazon Bedrock</text>
+
+  <rect x="246" y="532" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="545" text-anchor="middle" fill="#fde68a" font-size="9">qwen2.5:3b — クエリ応答・通知文生成</text>
+
+  <rect x="246" y="554" width="176" height="18" rx="3" fill="#0f172a" stroke="#78350f" stroke-width="1"/>
+  <text x="334" y="567" text-anchor="middle" fill="#fde68a" font-size="9">nomic-embed-text — Embedding生成</text>
+
+  <text x="334" y="590" text-anchor="middle" fill="#475569" font-size="9">PVC: /root/.ollama（モデル永続化）</text>
+
+  <!-- FastAPI Backend -->
+  <rect x="234" y="614" width="200" height="120" rx="8" fill="#1e293b" stroke="#166534" stroke-width="1.5"/>
+  <text x="334" y="634" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="bold">FastAPI Backend</text>
+  <text x="334" y="648" text-anchor="middle" fill="#14532d" font-size="10">:30800  /docs</text>
+  <text x="334" y="662" text-anchor="middle" fill="#64748b" font-size="9">JWT HS256 認証</text>
+
+  <text x="246" y="682" fill="#86efac" font-size="9">• /ops/*  パイプライン・Kafka監視</text>
+  <text x="246" y="696" fill="#86efac" font-size="9">• /business/*  ダッシュボードAPI</text>
+  <text x="246" y="710" fill="#86efac" font-size="9">• /auth/*  サインイン・サインアウト</text>
+  <text x="246" y="724" fill="#86efac" font-size="9">• clickhouse_connect / SQLAlchemy</text>
+
+  <!-- Arrows: PG/CH/Redis → Backend -->
+  <line x1="706" y1="290" x2="436" y2="680" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrd)"/>
+  <line x1="706" y1="410" x2="436" y2="690" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrd)"/>
+  <line x1="706" y1="516" x2="436" y2="700" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrd)"/>
+
+  <!-- Ollama → Backend -->
+  <line x1="334" y1="596" x2="334" y2="612" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== LAYER 5: Frontend ===== -->
+  <rect x="480" y="614" width="200" height="120" rx="8" fill="#1e293b" stroke="#4338ca" stroke-width="1.5"/>
+  <text x="580" y="634" text-anchor="middle" fill="#818cf8" font-size="12" font-weight="bold">Next.js Frontend</text>
+  <text x="580" y="648" text-anchor="middle" fill="#312e81" font-size="10">:30300</text>
+  <text x="580" y="662" text-anchor="middle" fill="#64748b" font-size="9">App Router + ShadCN</text>
+
+  <text x="492" y="682" fill="#a5b4fc" font-size="9">• /ops/*   Opsダッシュボード</text>
+  <text x="492" y="696" fill="#a5b4fc" font-size="9">• /business/*  ビジネスダッシュボード</text>
+  <text x="492" y="710" fill="#a5b4fc" font-size="9">• middleware.ts → JWT ロール制御</text>
+  <text x="492" y="724" fill="#a5b4fc" font-size="9">• SECURE_COOKIES=false (HTTP)</text>
+
+  <!-- Arrow: Backend → Frontend -->
+  <line x1="434" y1="674" x2="478" y2="674" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== LAYER 6: Users ===== -->
+  <rect x="730" y="600" width="196" height="148" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="828" y="620" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">ユーザー</text>
+
+  <!-- User roles -->
+  <rect x="742" y="628" width="172" height="26" rx="4" fill="#0f172a" stroke="#1e40af" stroke-width="1"/>
+  <text x="828" y="645" text-anchor="middle" fill="#93c5fd" font-size="10">engineer  →  /ops/*</text>
+
+  <rect x="742" y="660" width="172" height="26" rx="4" fill="#0f172a" stroke="#7c3aed" stroke-width="1"/>
+  <text x="828" y="677" text-anchor="middle" fill="#c4b5fd" font-size="10">marketer  →  /business/* (全店舗)</text>
+
+  <rect x="742" y="692" width="172" height="26" rx="4" fill="#0f172a" stroke="#be185d" stroke-width="1"/>
+  <text x="828" y="709" text-anchor="middle" fill="#f9a8d4" font-size="10">store_manager  →  /business/* (店舗)</text>
+
+  <rect x="742" y="724" width="172" height="18" rx="4" fill="#0f172a" stroke="#475569" stroke-width="1"/>
+  <text x="828" y="737" text-anchor="middle" fill="#94a3b8" font-size="9">admin  →  /ops/* + /business/*</text>
+
+  <!-- Arrow: Frontend → Users -->
+  <line x1="680" y1="674" x2="728" y2="674" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ===== Legend ===== -->
+  <rect x="30" y="730" width="160" height="142" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="110" y="750" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">凡例</text>
+
+  <line x1="42" y1="768" x2="70" y2="768" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="78" y="772" fill="#64748b" font-size="10">データフロー</text>
+
+  <line x1="42" y1="786" x2="70" y2="786" stroke="#334155" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrd)"/>
+  <text x="78" y="790" fill="#64748b" font-size="10">API参照</text>
+
+  <rect x="42" y="800" width="14" height="10" rx="2" fill="#1e293b" stroke="#b45309" stroke-width="1.5"/>
+  <text x="62" y="810" fill="#fbbf24" font-size="10">Kafka</text>
+
+  <rect x="42" y="818" width="14" height="10" rx="2" fill="#1e293b" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="62" y="828" fill="#60a5fa" font-size="10">PostgreSQL</text>
+
+  <rect x="42" y="836" width="14" height="10" rx="2" fill="#1e293b" stroke="#c2410c" stroke-width="1.5"/>
+  <text x="62" y="846" fill="#fb923c" font-size="10">ClickHouse</text>
+
+  <rect x="42" y="854" width="14" height="10" rx="2" fill="#1e293b" stroke="#b91c1c" stroke-width="1.5"/>
+  <text x="62" y="864" fill="#f87171" font-size="10">Redis</text>
+
+  <!-- AWS Labels column -->
+  <rect x="200" y="730" width="120" height="142" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="260" y="750" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">AWS対応</text>
+  <text x="212" y="770" fill="#64748b" font-size="9">Kafka → MSK</text>
+  <text x="212" y="786" fill="#64748b" font-size="9">S3 → S3</text>
+  <text x="212" y="802" fill="#64748b" font-size="9">PostgreSQL → RDS</text>
+  <text x="212" y="818" fill="#64748b" font-size="9">ClickHouse → EC2</text>
+  <text x="212" y="834" fill="#64748b" font-size="9">Redis → ElastiCache</text>
+  <text x="212" y="850" fill="#64748b" font-size="9">Ollama → Bedrock</text>
+  <text x="212" y="866" fill="#64748b" font-size="9">k3s → EKS</text>
+
+  <!-- Arrowhead markers -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#475569"/>
+    </marker>
+    <marker id="arrd" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#334155"/>
+    </marker>
+  </defs>
+</svg>
