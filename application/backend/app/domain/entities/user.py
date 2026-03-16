@@ -4,6 +4,25 @@ from app.domain.value_objects.role import Role
 
 
 @dataclass(frozen=True)
+class UserRecord:
+    """リポジトリから返されるユーザーレコード（ハッシュ化パスワード含む）"""
+
+    user_id: int
+    username: str
+    hashed_password: str
+    role: Role
+    store_id: int | None = None
+
+    def to_auth_user(self) -> "AuthUser":
+        return AuthUser(
+            user_id=self.user_id,
+            username=self.username,
+            role=self.role,
+            store_id=self.store_id,
+        )
+
+
+@dataclass(frozen=True)
 class AuthUser:
     user_id: int
     username: str

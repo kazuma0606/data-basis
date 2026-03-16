@@ -21,9 +21,9 @@ dependencies = [
     "redis[hiredis]>=5.2",
     # HTTP クライアント（Ollama 呼び出し）
     "httpx>=0.28",
-    # JWT
+    # JWT・パスワードハッシュ
     "python-jose[cryptography]>=3.3",
-    "passlib[bcrypt]>=1.7",
+    "bcrypt>=4.0",
     # 構造化ログ
     "structlog>=24.4",
     # S3（LocalStack）

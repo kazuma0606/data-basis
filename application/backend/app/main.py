@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.domain.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
+from app.presentation.middleware.auth_middleware import AuthMiddleware
+from app.presentation.routers import auth as auth_router
 from app.shared.logging import configure_logging, get_logger
 
 configure_logging()
@@ -15,6 +17,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://192.168.56.10:30080"],
@@ -38,6 +41,10 @@ async def unauthorized_handler(_: Request, exc: UnauthorizedError) -> JSONRespon
 @app.exception_handler(ForbiddenError)
 async def forbidden_handler(_: Request, exc: ForbiddenError) -> JSONResponse:
     return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+
+# ── ルーター登録 ──────────────────────────────────────────
+app.include_router(auth_router.router)
 
 
 # ── ヘルスチェック ────────────────────────────────────────

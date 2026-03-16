@@ -85,17 +85,17 @@ JWT_EXPIRE_MINUTES=480
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 2-1 | `app/infrastructure/database/models.py` — usersテーブル ORMモデル（id, username, hashed_password, role, store_id） | [ ] |
-| 2-2 | `app/interfaces/repositories/user_repository.py` — IUserRepository Protocol（`find_by_username` 等） | [ ] |
-| 2-3 | `app/infrastructure/repositories/postgres_user_repository.py` — IUserRepository 実装 | [ ] |
-| 2-4 | `app/use_cases/auth/login.py` — LoginUseCase（パスワード検証 → JWT発行） | [ ] |
-| 2-5 | `app/use_cases/auth/get_me.py` — GetMeUseCase（JWTから現在ユーザー情報を返す） | [ ] |
-| 2-6 | `app/presentation/schemas/auth.py` — LoginRequest, TokenResponse, MeResponse | [ ] |
-| 2-7 | `app/presentation/middleware/auth_middleware.py` — `Authorization: Bearer` を検証し `request.state.current_user` に AuthUser を注入 | [ ] |
-| 2-8 | `app/dependencies.py` — `get_current_user`, `require_ops_role`, `require_business_role` DI関数 | [ ] |
-| 2-9 | `app/presentation/routers/auth.py` — POST /auth/login, POST /auth/logout, GET /auth/me | [ ] |
-| 2-10 | `tests/unit/use_cases/auth/test_login.py` — 正常ログイン / 存在しないユーザー / パスワード不一致 | [ ] |
-| 2-11 | `tests/e2e/test_auth_flow.py` — login → JWT取得 → /auth/me → logout の一連フロー | [ ] |
+| 2-1 | `app/infrastructure/database/models.py` — usersテーブル ORMモデル（id, username, hashed_password, role, store_id） | [x] |
+| 2-2 | `app/interfaces/repositories/user_repository.py` — IUserRepository Protocol（`find_by_username` 等） | [x] |
+| 2-3 | `app/infrastructure/repositories/postgres_user_repository.py` — IUserRepository 実装 | [x] |
+| 2-4 | `app/use_cases/auth/login.py` — LoginUseCase（パスワード検証 → JWT発行） | [x] |
+| 2-5 | `app/use_cases/auth/get_me.py` — GetMeUseCase（JWTから現在ユーザー情報を返す） | [x] |
+| 2-6 | `app/presentation/schemas/auth.py` — LoginRequest, TokenResponse, MeResponse | [x] |
+| 2-7 | `app/presentation/middleware/auth_middleware.py` — `Authorization: Bearer` を検証し `request.state.current_user` に AuthUser を注入 | [x] |
+| 2-8 | `app/dependencies.py` — `get_current_user`, `require_ops_role`, `require_business_role` DI関数 | [x] |
+| 2-9 | `app/presentation/routers/auth.py` — POST /auth/login, POST /auth/logout, GET /auth/me | [x] |
+| 2-10 | `tests/unit/use_cases/auth/test_login.py` — 正常ログイン / 存在しないユーザー / パスワード不一致 | [x] |
+| 2-11 | `tests/e2e/test_auth_flow.py` — login → JWT取得 → /auth/me → logout の一連フロー | [x] |
 
 ---
 
