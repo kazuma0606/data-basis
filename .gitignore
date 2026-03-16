@@ -13,3 +13,16 @@ infrastructure/terraform/.terraform.lock.hcl
 infrastructure/vagrant/.vagrant/
 infrastructure/vagrant/minimal/.vagrant/
 infrastructure/vagrant/production/.vagrant/
+
+# Frontend — Next.js
+application/frontend/.next/
+application/frontend/node_modules/
+application/frontend/.env.local
+
+# Backend — Python
+application/backend/.venv/
+application/backend/__pycache__/
+application/backend/**/__pycache__/
+application/backend/.env.local
+application/backend/.env.host
+application/backend/.env.vm

@@ -97,26 +97,26 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 1-1 | `package.json` — Next.js 15 + TypeScript + Tailwind + ShadCN + `jose` + SWR + Jest + RTL + Playwright の依存定義 | [ ] |
-| 1-2 | ShadCN 初期設定（`components.json`・`cn()` utility・基本コンポーネント追加） | [ ] |
-| 1-3 | `lib/auth/types.ts` — `AuthUser`（userId, username, role, storeId）・`Role` 型 | [ ] |
-| 1-4 | `lib/auth/provider.ts` — `IAuthProvider` インターフェース（`signIn` / `signOut` / `verifyToken`） | [ ] |
-| 1-5 | `lib/auth/providers/fastapi.ts` — FastAPI `/auth/login` を呼び JWT を httpOnly cookie に保存。`jose` で署名検証 | [ ] |
-| 1-6 | `lib/auth/index.ts` — `export { fastapiProvider as authProvider }`（切り替えはここのみ） | [ ] |
-| 1-7 | `lib/auth/session.ts` — `getSession(): Promise<AuthUser \| null>`（Server Components・middleware 用） | [ ] |
-| 1-8 | `lib/auth/client.tsx` — `AuthContext` + `useAuth()` フック（Client Components 用） | [ ] |
-| 1-9 | `app/api/auth/signin/route.ts` — ログインAPIルート（provider.signIn → cookie セット） | [ ] |
-| 1-10 | `app/api/auth/signout/route.ts` — ログアウトAPIルート（cookie クリア） | [ ] |
-| 1-11 | `lib/api.ts` — FastAPI への fetch ラッパー（cookie から JWT を読み取り Bearer token として付与） | [ ] |
-| 1-12 | `lib/types.ts` — FastAPIレスポンスの型定義（Customer, KpiSummary, TopicInfo 等） | [ ] |
-| 1-13 | `middleware.ts` — `getSession()` でロール取得 → role によるリダイレクト制御（auth実装に依存しない） | [ ] |
-| 1-14 | `.env.example` — `BACKEND_URL`・`AUTH_COOKIE_SECRET`（cookie署名用）のテンプレート | [ ] |
-| 1-15 | Jest 設定（`jest.config.ts`・`jest.setup.ts`）— Next.js + TypeScript + RTL 環境構築 | [ ] |
-| 1-16 | Playwright 設定（`playwright.config.ts`）— `baseURL: http://localhost:3000`・`webServer` で `next dev` 自動起動 | [ ] |
-| 1-17 | `tests/unit/lib/auth/verifyToken.test.ts` — `verifyToken` の正常・期限切れ・不正署名ケース | [ ] |
-| 1-18 | `tests/unit/lib/auth/session.test.ts` — cookie mock で `getSession` の有無・デコード検証 | [ ] |
-| 1-19 | `tests/unit/middleware.test.ts` — 未認証リダイレクト・role別ルーティングロジック検証 | [ ] |
-| 1-20 | `tests/unit/lib/api.test.ts` — Bearer token 自動付与・401/403/5xx エラーハンドリング検証 | [ ] |
+| 1-1 | `package.json` — Next.js 15 + TypeScript + Tailwind + ShadCN + `jose` + SWR + Jest + RTL + Playwright の依存定義 | [x] |
+| 1-2 | ShadCN 初期設定（`components.json`・`cn()` utility・基本コンポーネント追加） | [x] |
+| 1-3 | `lib/auth/types.ts` — `AuthUser`（userId, username, role, storeId）・`Role` 型 | [x] |
+| 1-4 | `lib/auth/provider.ts` — `IAuthProvider` インターフェース（`signIn` / `signOut` / `verifyToken`） | [x] |
+| 1-5 | `lib/auth/providers/fastapi.ts` — FastAPI `/auth/login` を呼び JWT を httpOnly cookie に保存。`jose` で署名検証 | [x] |
+| 1-6 | `lib/auth/index.ts` — `export { fastapiProvider as authProvider }`（切り替えはここのみ） | [x] |
+| 1-7 | `lib/auth/session.ts` — `getSession(): Promise<AuthUser \| null>`（Server Components・middleware 用） | [x] |
+| 1-8 | `lib/auth/client.tsx` — `AuthContext` + `useAuth()` フック（Client Components 用） | [x] |
+| 1-9 | `app/api/auth/signin/route.ts` — ログインAPIルート（provider.signIn → cookie セット） | [x] |
+| 1-10 | `app/api/auth/signout/route.ts` — ログアウトAPIルート（cookie クリア） | [x] |
+| 1-11 | `lib/api.ts` — FastAPI への fetch ラッパー（cookie から JWT を読み取り Bearer token として付与） | [x] |
+| 1-12 | `lib/types.ts` — FastAPIレスポンスの型定義（Customer, KpiSummary, TopicInfo 等） | [x] |
+| 1-13 | `middleware.ts` — `getSession()` でロール取得 → role によるリダイレクト制御（auth実装に依存しない） | [x] |
+| 1-14 | `.env.example` — `BACKEND_URL`・`AUTH_COOKIE_SECRET`（cookie署名用）のテンプレート | [x] |
+| 1-15 | Jest 設定（`jest.config.ts`・`jest.setup.ts`）— Next.js + TypeScript + RTL 環境構築 | [x] |
+| 1-16 | Playwright 設定（`playwright.config.ts`）— `baseURL: http://localhost:3000`・`webServer` で `next dev` 自動起動 | [x] |
+| 1-17 | `tests/unit/lib/auth/verifyToken.test.ts` — `verifyToken` の正常・期限切れ・不正署名ケース | [x] |
+| 1-18 | `tests/unit/lib/auth/session.test.ts` — cookie mock で `getSession` の有無・デコード検証 | [x] |
+| 1-19 | `tests/unit/middleware.test.ts` — 未認証リダイレクト・role別ルーティングロジック検証 | [x] |
+| 1-20 | `tests/unit/lib/api.test.ts` — Bearer token 自動付与・401/403/5xx エラーハンドリング検証 | [x] |
 
 ---
 
