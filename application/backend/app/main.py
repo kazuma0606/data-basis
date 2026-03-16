@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.domain.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
 from app.presentation.middleware.auth_middleware import AuthMiddleware
 from app.presentation.routers import auth as auth_router
+from app.presentation.routers import ops as ops_router
 from app.shared.logging import configure_logging, get_logger
 
 configure_logging()
@@ -45,6 +46,7 @@ async def forbidden_handler(_: Request, exc: ForbiddenError) -> JSONResponse:
 
 # ── ルーター登録 ──────────────────────────────────────────
 app.include_router(auth_router.router)
+app.include_router(ops_router.router)
 
 
 # ── ヘルスチェック ────────────────────────────────────────

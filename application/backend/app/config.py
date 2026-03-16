@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://127.0.0.1:32379/0"
 
     # ── Kafka ─────────────────────────────────────────────
-    kafka_bootstrap_servers: str = "127.0.0.1:32092"
+    kafka_bootstrap_servers: str = "192.168.56.10:32092"
 
     # ── Ollama ────────────────────────────────────────────
     ollama_base_url: str = "http://127.0.0.1:31434"

@@ -103,26 +103,26 @@ JWT_EXPIRE_MINUTES=480
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 3-1 | `app/interfaces/clients/kafka_client.py` — IKafkaAdminClient Protocol（`list_topics`, `list_consumer_groups`） | [ ] |
-| 3-2 | `app/infrastructure/clients/kafka_admin_client.py` — kafka-python-ng AdminClient ラッパー | [ ] |
-| 3-3 | `app/use_cases/ops/health_check.py` — PostgreSQL / ClickHouse / Kafka / Redis / Ollama への疎通を並列チェック | [ ] |
-| 3-4 | `app/use_cases/ops/get_kafka_topics.py` — トピック一覧・パーティション数・メッセージ数を取得 | [ ] |
-| 3-5 | `app/use_cases/ops/get_consumer_groups.py` — コンシューマグループ一覧と状態を取得 | [ ] |
-| 3-6 | `app/infrastructure/database/models.py` — pipeline_jobs / scoring_batches テーブル ORMモデル追記 | [ ] |
-| 3-7 | `app/interfaces/repositories/job_repository.py` — IJobRepository Protocol | [ ] |
-| 3-8 | `app/infrastructure/repositories/postgres_job_repository.py` — pipeline_jobs / scoring_batches の読み取り実装 | [ ] |
-| 3-9 | `app/use_cases/ops/get_pipeline_jobs.py` — ETLジョブ一覧・実行履歴・成功/失敗を取得 | [ ] |
-| 3-10 | `app/use_cases/ops/get_scoring_batches.py` — バッチ実行履歴・最終実行日時・次回予定を取得 | [ ] |
-| 3-11 | `app/interfaces/repositories/schema_repository.py` — ISchemaRepository Protocol | [ ] |
-| 3-12 | `app/infrastructure/repositories/postgres_schema_repository.py` — information_schema からテーブル定義を取得 | [ ] |
-| 3-13 | `app/use_cases/ops/get_schema_tables.py` — テーブル定義（カラム名・型・制約）を取得 | [ ] |
-| 3-14 | `app/presentation/schemas/ops.py` — HealthResponse, TopicInfo, ConsumerGroupInfo, JobInfo, BatchInfo, TableSchema | [ ] |
-| 3-15 | `app/presentation/routers/ops.py` — GET /ops/health, /ops/kafka/topics, /ops/kafka/consumer-groups, /ops/pipeline/jobs, /ops/scoring/batches, /ops/schema/tables | [ ] |
-| 3-16 | `tests/unit/use_cases/ops/test_health_check.py` — 各サービスの正常/障害ケースをモックで検証 | [ ] |
-| 3-17 | `tests/unit/use_cases/ops/test_get_kafka_topics.py` | [ ] |
-| 3-18 | `tests/unit/use_cases/ops/test_get_scoring_batches.py` | [ ] |
-| 3-19 | `tests/integration/clients/test_kafka_admin_client.py` — 実Kafkaへの接続・トピック一覧取得 | [ ] |
-| 3-20 | `tests/e2e/test_ops_endpoints.py` — engineerトークンで全opsエンドポイントが200 / marketerトークンで403 | [ ] |
+| 3-1 | `app/interfaces/clients/kafka_client.py` — IKafkaAdminClient Protocol（`list_topics`, `list_consumer_groups`） | [x] |
+| 3-2 | `app/infrastructure/clients/kafka_admin_client.py` — kafka-python-ng AdminClient ラッパー | [x] |
+| 3-3 | `app/use_cases/ops/health_check.py` — PostgreSQL / ClickHouse / Kafka / Redis / Ollama への疎通を並列チェック | [x] |
+| 3-4 | `app/use_cases/ops/get_kafka_topics.py` — トピック一覧・パーティション数・メッセージ数を取得 | [x] |
+| 3-5 | `app/use_cases/ops/get_consumer_groups.py` — コンシューマグループ一覧と状態を取得 | [x] |
+| 3-6 | `app/infrastructure/database/models.py` — pipeline_jobs / scoring_batches テーブル ORMモデル追記 | [x] |
+| 3-7 | `app/interfaces/repositories/job_repository.py` — IJobRepository Protocol | [x] |
+| 3-8 | `app/infrastructure/repositories/postgres_job_repository.py` — pipeline_jobs / scoring_batches の読み取り実装 | [x] |
+| 3-9 | `app/use_cases/ops/get_pipeline_jobs.py` — ETLジョブ一覧・実行履歴・成功/失敗を取得 | [x] |
+| 3-10 | `app/use_cases/ops/get_scoring_batches.py` — バッチ実行履歴・最終実行日時・次回予定を取得 | [x] |
+| 3-11 | `app/interfaces/repositories/schema_repository.py` — ISchemaRepository Protocol | [x] |
+| 3-12 | `app/infrastructure/repositories/postgres_schema_repository.py` — information_schema からテーブル定義を取得 | [x] |
+| 3-13 | `app/use_cases/ops/get_schema_tables.py` — テーブル定義（カラム名・型・制約）を取得 | [x] |
+| 3-14 | `app/presentation/schemas/ops.py` — HealthResponse, TopicInfo, ConsumerGroupInfo, JobInfo, BatchInfo, TableSchema | [x] |
+| 3-15 | `app/presentation/routers/ops.py` — GET /ops/health, /ops/kafka/topics, /ops/kafka/consumer-groups, /ops/pipeline/jobs, /ops/scoring/batches, /ops/schema/tables | [x] |
+| 3-16 | `tests/unit/use_cases/ops/test_health_check.py` — 各サービスの正常/障害ケースをモックで検証 | [x] |
+| 3-17 | `tests/unit/use_cases/ops/test_get_kafka_topics.py` | [x] |
+| 3-18 | `tests/unit/use_cases/ops/test_get_scoring_batches.py` | [x] |
+| 3-19 | `tests/integration/clients/test_kafka_admin_client.py` — 実Kafkaへの接続・トピック一覧取得 | [x] |
+| 3-20 | `tests/e2e/test_ops_endpoints.py` — engineerトークンで全opsエンドポイントが200 / marketerトークンで403 | [x] |
 
 ---
 
