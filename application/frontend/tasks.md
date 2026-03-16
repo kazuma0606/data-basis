@@ -135,14 +135,14 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 3-1 | `app/ops/layout.tsx` — サイドバー（Overview/Kafka/Pipeline/Scoring/Schema）・ヘッダー・ログアウト | [ ] |
-| 3-2 | `app/ops/overview/page.tsx` — ヘルスチェック（各サービスの状態バッジ一覧） | [ ] |
-| 3-3 | `app/ops/kafka/page.tsx` — トピック一覧・パーティション数・メッセージ数（SWRで30秒ポーリング） | [ ] |
-| 3-4 | `app/ops/pipeline/page.tsx` — ETLジョブ実行履歴（ステータス・処理件数・実行時間） | [ ] |
-| 3-5 | `app/ops/scoring/page.tsx` — バッチ実行履歴・最終実行日時・次回予定 | [ ] |
-| 3-6 | `app/ops/schema/page.tsx` — テーブル定義一覧（カラム名・型・NULL制約） | [ ] |
-| 3-7 | `tests/component/ops/*.test.tsx` — 各Opsページのレンダリング検証（APIレスポンスをfetch mockで注入） | [ ] |
-| 3-8 | `tests/e2e/ops.spec.ts` — engineer でログイン → 各ページ表示確認・marketer でアクセス → リダイレクト確認 | [ ] |
+| 3-1 | `app/ops/layout.tsx` — サイドバー（Overview/Kafka/Pipeline/Scoring/Schema）・ヘッダー・ログアウト | [x] |
+| 3-2 | `app/ops/overview/page.tsx` — ヘルスチェック（各サービスの状態バッジ一覧） | [x] |
+| 3-3 | `app/ops/kafka/page.tsx` — トピック一覧・パーティション数・メッセージ数（SWRで30秒ポーリング） | [x] |
+| 3-4 | `app/ops/pipeline/page.tsx` — ETLジョブ実行履歴（ステータス・処理件数・実行時間） | [x] |
+| 3-5 | `app/ops/scoring/page.tsx` — バッチ実行履歴・最終実行日時・次回予定 | [x] |
+| 3-6 | `app/ops/schema/page.tsx` — テーブル定義一覧（カラム名・型・NULL制約） | [x] |
+| 3-7 | `tests/component/ops/*.test.tsx` — 各Opsページのレンダリング検証（APIレスポンスをfetch mockで注入） | [x] |
+| 3-8 | `tests/e2e/ops.spec.ts` — engineer でログイン → 各ページ表示確認・marketer でアクセス → リダイレクト確認 | [x] |
 
 ---
 

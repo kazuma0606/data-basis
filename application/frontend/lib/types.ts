@@ -75,44 +75,56 @@ export interface NLQueryResponse {
 
 // ── Ops ───────────────────────────────────────────────────────────────────
 
-export interface HealthStatus {
+export interface ServiceHealth {
+  name: string;
   status: string;
-  services: Record<string, string>;
+  error: string | null;
 }
 
-export interface KafkaTopic {
+export interface HealthResponse {
+  overall: string;
+  services: ServiceHealth[];
+}
+
+export interface TopicInfo {
   name: string;
   partitions: number;
   message_count: number;
-  consumer_groups: string[];
 }
 
-export interface PipelineJob {
-  job_id: string;
+export interface ConsumerGroup {
+  group_id: string;
+  state: string;
+}
+
+export interface JobInfo {
+  id: number;
   job_name: string;
   status: string;
-  records_processed: number | null;
   started_at: string;
-  completed_at: string | null;
+  finished_at: string | null;
+  records_processed: number | null;
   error_message: string | null;
 }
 
-export interface ScoringJob {
-  job_id: string;
-  job_type: string;
+export interface BatchInfo {
+  id: number;
+  batch_type: string;
   status: string;
-  records_scored: number | null;
   started_at: string;
-  completed_at: string | null;
+  finished_at: string | null;
+  records_processed: number | null;
+  next_run_at: string | null;
+}
+
+export interface ColumnInfo {
+  name: string;
+  data_type: string;
+  nullable: boolean;
+  default: string | null;
 }
 
 export interface TableSchema {
   table_name: string;
-  columns: ColumnDef[];
-}
-
-export interface ColumnDef {
-  column_name: string;
-  data_type: string;
-  is_nullable: boolean;
+  columns: ColumnInfo[];
 }
