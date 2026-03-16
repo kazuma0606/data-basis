@@ -6,28 +6,46 @@ export type Role = "engineer" | "marketer" | "store_manager" | "admin";
 
 export interface KpiSummary {
   active_customers: number;
+  dormant_customers: number;
+  churned_customers: number;
   churn_rate: number;
   weekly_revenue: number;
-  weekly_revenue_change: number;
 }
 
 export interface CustomerSummary {
-  unified_id: string;
-  full_name: string;
+  unified_id: number;
+  canonical_name: string;
   email: string | null;
-  segment: string | null;
-  churn_risk: string | null;
-  churn_score: number | null;
-  total_spend: number | null;
-  store_id: number | null;
-}
-
-export interface CustomerDetail extends CustomerSummary {
   phone: string | null;
   prefecture: string | null;
-  gender: string | null;
-  birth_year: number | null;
-  suggested_products: ProductRecommendation[];
+  churn_label: string | null; // 'active' | 'dormant' | 'churned' | null
+}
+
+export interface ChurnLabel {
+  label: string;
+  last_purchase_at: string | null;
+  days_since_purchase: number | null;
+  updated_at: string;
+}
+
+export interface CustomerScore {
+  category_id: number;
+  affinity_score: number;
+  churn_risk_score: number;
+  visit_predict_score: number;
+  timing_score: number;
+  updated_at: string;
+}
+
+export interface CustomerDetail {
+  unified_id: number;
+  canonical_name: string;
+  email: string | null;
+  phone: string | null;
+  birth_date: string | null;
+  prefecture: string | null;
+  churn_label: ChurnLabel | null;
+  scores: CustomerScore[];
 }
 
 export interface CustomerListResponse {
@@ -37,40 +55,50 @@ export interface CustomerListResponse {
   limit: number;
 }
 
-export interface SegmentCount {
-  segment: string;
+export interface SegmentSummary {
+  label: string;
   count: number;
   percentage: number;
 }
 
 export interface SegmentTrend {
   week: string;
-  segment: string;
-  count: number;
+  label: string;
+  customer_count: number;
+  avg_days_since_purchase: number;
 }
 
 export interface SalesByChannel {
+  date: string;
   channel: string;
-  revenue: number;
-  transaction_count: number;
+  store_id: number | null;
+  category_id: number | null;
+  total_amount: number;
+  order_count: number;
+  customer_count: number;
 }
 
 export interface CategoryAffinity {
-  segment: string;
-  category: string;
-  affinity_score: number;
+  week: string;
+  category_id: number;
+  age_group: string;
+  gender: string;
+  avg_score: number;
+  customer_count: number;
 }
 
 export interface ProductRecommendation {
-  product_id: string;
-  product_name: string;
-  category: string;
-  score: number;
+  unified_product_id: number;
+  name: string;
+  brand: string | null;
+  price: number | null;
+  category_id: number | null;
+  similarity: number;
 }
 
 export interface NLQueryResponse {
-  answer: string;
   query: string;
+  answer: string;
 }
 
 // ── Ops ───────────────────────────────────────────────────────────────────
