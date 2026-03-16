@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 data-basis/
-  plan/                 # プロジェクト全体の要件・設計ドキュメント
+  v1.0/                 # プロジェクト全体の要件・設計ドキュメント（v1.0）
   infrastructure/       # インフラコード
     vagrant/            # VM管理（Vagrantfile）← VM起動はここ
     terraform/          # 将来：VM内サービスプロビジョニング用（現在は未使用）
@@ -142,9 +142,9 @@ Next.js `middleware.ts` でJWT検証 → ロールに応じてルーティング
 
 ## 設計ドキュメント
 
-- `plan/company.md` — 発注元（テクノマート）の背景・制約
-- `plan/user_story.md` — ユーザーストーリー・スコアリング設計
-- `plan/data_problems.md` — 既存データの問題点
-- `plan/architecture.md` — インフラ全体構成
-- `plan/data_schema.md` — テーブル設計・Kafkaトピック対応
+- `v1.0/company.md` — 発注元（テクノマート）の背景・制約
+- `v1.0/user_story.md` — ユーザーストーリー・スコアリング設計
+- `v1.0/data_problems.md` — 既存データの問題点
+- `v1.0/architecture.md` — インフラ全体構成
+- `v1.0/data_schema.md` — テーブル設計・Kafkaトピック対応
 - `application/plan/app_requirements.md` — ダッシュボード・API・認証設計
