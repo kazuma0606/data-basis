@@ -7,6 +7,7 @@ set -euo pipefail
 
 NAMESPACE="technomart"
 K8S_DIR="/technomart/infrastructure/k8s"
+APP_DIR="/technomart/application"
 
 echo "======================================================"
 echo " テクノマート インフラ デプロイ"
@@ -73,6 +74,35 @@ kubectl exec -n "$NAMESPACE" "$OLLAMA_POD" -- ollama pull nomic-embed-text
 kubectl exec -n "$NAMESPACE" "$OLLAMA_POD" -- ollama pull gemma2
 echo "  OK: Ollama @ http://192.168.56.10:31434"
 
+# ── [7/7] Backend (FastAPI) ───────────────────────────────
+echo ""
+echo "[7/7] Backend (FastAPI)..."
+
+# イメージビルド
+echo "  Docker イメージをビルド中..."
+docker build -t technomart-backend:latest "$APP_DIR/backend"
+
+# k3s にインポート
+echo "  k3s にインポート中..."
+docker save technomart-backend:latest | k3s ctr images import -
+
+# JWT_SECRET_KEY が未設定の場合は生成して Secret を作成
+if ! kubectl get secret backend-secret -n "$NAMESPACE" &>/dev/null; then
+  echo "  backend-secret を生成中..."
+  JWT_SECRET=$(openssl rand -hex 32)
+  kubectl create secret generic backend-secret \
+    --from-literal=POSTGRES_PASSWORD=technomart \
+    --from-literal=CLICKHOUSE_PASSWORD=technomart \
+    --from-literal=JWT_SECRET_KEY="$JWT_SECRET" \
+    --from-literal=AWS_ACCESS_KEY_ID=test \
+    --from-literal=AWS_SECRET_ACCESS_KEY=test \
+    -n "$NAMESPACE"
+fi
+
+kubectl apply -f "$K8S_DIR/backend/manifest.yaml"
+kubectl rollout status deployment/backend -n "$NAMESPACE" --timeout=3m
+echo "  OK: Backend API @ http://192.168.56.10:30800"
+
 # ── 完了確認 ──────────────────────────────────────────────
 echo ""
 echo "======================================================"
@@ -86,5 +116,6 @@ echo "  PostgreSQL   192.168.56.10:32432  (db=technomart, user=technomart)"
 echo "  ClickHouse   192.168.56.10:30823  (HTTP) / :30900 (native)"
 echo "  LocalStack   http://192.168.56.10:31566  (S3: technomart-datalake)"
 echo "  Ollama       http://192.168.56.10:31434"
+echo "  Backend API  http://192.168.56.10:30800  (docs: /docs)"
 echo ""
 kubectl get pods -n "$NAMESPACE"
