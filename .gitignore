@@ -1,3 +1,6 @@
+# 接続情報（検証用）
+CONNECTIONS.md
+
 verification/*.db
 verification/uv.lock
 verification/src/__pycache__/

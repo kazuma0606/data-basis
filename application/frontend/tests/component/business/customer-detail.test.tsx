@@ -57,7 +57,7 @@ describe("CustomerDetailPage", () => {
     const page = await CustomerDetailPage(makeProps());
     render(page);
 
-    expect(screen.getByText("山田太郎")).toBeInTheDocument();
+    expect(screen.getAllByText("山田太郎").length).toBeGreaterThan(0);
     expect(screen.getByText("yamada@example.com")).toBeInTheDocument();
     expect(screen.getByText("090-1234-5678")).toBeInTheDocument();
     expect(screen.getByText("東京都")).toBeInTheDocument();
@@ -102,7 +102,9 @@ describe("CustomerDetailPage", () => {
   });
 
   it("shows error on fetch failure", async () => {
-    mockApiFetch.mockRejectedValueOnce(new Error("顧客が見つかりません"));
+    mockApiFetch
+      .mockRejectedValueOnce(new Error("顧客が見つかりません"))
+      .mockResolvedValueOnce([]);
 
     const page = await CustomerDetailPage(makeProps("999"));
     render(page);

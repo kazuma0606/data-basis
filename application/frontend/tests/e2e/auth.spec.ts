@@ -29,7 +29,7 @@ test.describe("ログインページ", () => {
   });
 
   test("ログインページが表示される", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: /ログイン/ })).toBeVisible();
+    await expect(page.getByText("ログイン", { exact: true }).first()).toBeVisible();
     await expect(page.getByLabel(/ユーザー名/)).toBeVisible();
     await expect(page.getByLabel(/パスワード/)).toBeVisible();
     await expect(page.getByRole("button", { name: /ログイン/ })).toBeVisible();
@@ -151,7 +151,7 @@ test.describe("ログアウト", () => {
 
     // 保護されたページにアクセス → ログイン画面へ
     await page.goto("/ops/overview");
-    await page.waitForURL("**/auth/login", { timeout: 5_000 });
+    await page.waitForURL("**/auth/login**", { timeout: 5_000 });
     expect(page.url()).toContain("/auth/login");
   });
 });

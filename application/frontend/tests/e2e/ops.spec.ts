@@ -107,7 +107,7 @@ test.describe("未認証 — Ops へのアクセス", () => {
     page,
   }) => {
     await page.goto("/ops/overview");
-    await page.waitForURL("**/auth/login", { timeout: 5_000 });
+    await page.waitForURL("**/auth/login**", { timeout: 5_000 });
     expect(page.url()).toContain("/auth/login");
   });
 });

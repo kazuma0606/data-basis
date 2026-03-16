@@ -75,7 +75,7 @@ test.describe("Kafka監視 - APIエラー", () => {
     // エラー表示 or 空テーブルが表示されること（SWRがエラーを処理）
     await page.waitForLoadState("networkidle");
     // ページ自体はクラッシュしないことを確認
-    await expect(page.getByText("Kafka")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: "Kafka モニタリング" })).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -98,6 +98,6 @@ test.describe("ローディングUI", () => {
     await page.waitForLoadState("networkidle");
 
     // 最終的にページ内容が表示されていること
-    await expect(page.getByText("パイプライン")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "パイプライン実行履歴" })).toBeVisible({ timeout: 15_000 });
   });
 });

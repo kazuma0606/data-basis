@@ -31,7 +31,7 @@ test.describe("store_manager ロール", () => {
     await loginAs(page, "store_manager", "manager123", "/business/summary");
     await page.goto("/business/customers");
 
-    await expect(page.getByText("顧客一覧")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "顧客一覧" })).toBeVisible();
   });
 
   test("store_manager: セグメント分析が表示される", async ({ page }) => {
@@ -44,6 +44,8 @@ test.describe("store_manager ロール", () => {
   test("store_manager: ヘッダーにロールラベルが表示される", async ({ page }) => {
     await loginAs(page, "store_manager", "manager123", "/business/summary");
 
+    // ロールラベルはDropdownMenu内にあるのでトリガーをクリックして開く
+    await page.getByRole("button", { name: /store_manager/ }).click();
     await expect(page.getByText(/店舗マネージャー/)).toBeVisible();
   });
 });

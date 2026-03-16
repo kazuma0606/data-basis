@@ -49,16 +49,15 @@ test.describe("顧客一覧 (/business/customers)", () => {
   });
 
   test("顧客一覧ページが表示される", async ({ page }) => {
-    await expect(page.getByText("顧客一覧")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "顧客一覧" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "氏名" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "メール" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "都道府県" })).toBeVisible();
   });
 
   test("顧客リンクをクリックすると詳細ページに遷移する", async ({ page }) => {
-    // 最初の顧客リンクをクリック
-    const firstLink = page.getByRole("link").filter({ hasText: /\S/ }).first();
-    const href = await firstLink.getAttribute("href");
+    // テーブル内の最初の顧客リンクをクリック
+    const firstLink = page.locator("table a").first();
     await firstLink.click();
 
     await page.waitForURL("**/business/customers/**", { timeout: 10_000 });
@@ -79,8 +78,8 @@ test.describe("顧客詳細 (/business/customers/[id])", () => {
     await loginAs(page, "marketer", "marketer123");
     await page.goto("/business/customers");
 
-    // 最初の顧客リンクをクリック
-    const link = page.getByRole("link").filter({ hasText: /\S/ }).first();
+    // テーブル内の最初の顧客リンクをクリック
+    const link = page.locator("table a").first();
     await link.click();
     await page.waitForURL("**/business/customers/**", { timeout: 10_000 });
 
@@ -91,11 +90,11 @@ test.describe("顧客詳細 (/business/customers/[id])", () => {
     await loginAs(page, "marketer", "marketer123");
     await page.goto("/business/customers");
 
-    const link = page.getByRole("link").filter({ hasText: /\S/ }).first();
+    const link = page.locator("table a").first();
     await link.click();
     await page.waitForURL("**/business/customers/**", { timeout: 10_000 });
 
-    const backLink = page.getByRole("link", { name: /顧客一覧/ });
+    const backLink = page.getByRole("link", { name: "← 顧客一覧" });
     await expect(backLink).toBeVisible();
     await backLink.click();
     await page.waitForURL("**/business/customers", { timeout: 5_000 });
@@ -112,8 +111,8 @@ test.describe("セグメント分析 (/business/segments)", () => {
   });
 
   test("セグメント分析ページが表示される", async ({ page }) => {
-    await expect(page.getByText("セグメント分析")).toBeVisible();
-    await expect(page.getByText("セグメント構成")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "セグメント分析" })).toBeVisible();
+    await expect(page.getByText("セグメント構成", { exact: true })).toBeVisible();
     await expect(page.getByText("セグメント推移（週次）")).toBeVisible();
   });
 });
@@ -127,7 +126,7 @@ test.describe("カテゴリ親和性 (/business/affinity)", () => {
   });
 
   test("親和性ページが表示される", async ({ page }) => {
-    await expect(page.getByText("カテゴリ親和性")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "カテゴリ親和性" })).toBeVisible();
     await expect(page.getByText("親和性ヒートマップ")).toBeVisible();
   });
 });
@@ -141,7 +140,7 @@ test.describe("自然言語クエリ (/business/query)", () => {
   });
 
   test("クエリページが表示される", async ({ page }) => {
-    await expect(page.getByText("自然言語クエリ")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "自然言語クエリ" })).toBeVisible();
     await expect(page.getByPlaceholder(/東京在住/)).toBeVisible();
     await expect(page.getByRole("button", { name: "クエリ実行" })).toBeVisible();
   });

@@ -7,10 +7,11 @@ const JWT_ALGORITHM = process.env.JWT_ALGORITHM ?? "HS256";
 
 /**
  * JWT payload shape from FastAPI backend.
+ * sub = user_id (as string), username = login name
  */
 interface JwtPayload {
-  sub: string;       // username
-  user_id: number;
+  sub: string;        // user_id as string
+  username: string;   // login username
   role: Role;
   store_id: number | null;
   exp: number;
@@ -26,8 +27,8 @@ export const fastapiProvider: IAuthProvider = {
   async signIn(username: string, password: string): Promise<SignInResult> {
     const res = await fetch(`${BACKEND_URL}/auth/login`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ username, password }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
     });
 
     if (!res.ok) {
@@ -59,8 +60,8 @@ export const fastapiProvider: IAuthProvider = {
       const p = payload as unknown as JwtPayload;
 
       return {
-        userId: p.user_id,
-        username: p.sub,
+        userId: parseInt(p.sub, 10),
+        username: p.username,
         role: p.role,
         storeId: p.store_id ?? null,
       };

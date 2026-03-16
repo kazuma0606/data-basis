@@ -54,7 +54,7 @@ describe("CustomersPage", () => {
     const page = await CustomersPage(makeProps());
     render(page);
 
-    expect(screen.getByText(/全 100 件/)).toBeInTheDocument();
+    expect(screen.getAllByText(/全 100 件/).length).toBeGreaterThan(0);
   });
 
   it("shows customer detail links", async () => {

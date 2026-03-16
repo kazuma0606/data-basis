@@ -28,8 +28,8 @@ async function signToken(
 describe("fastapiProvider.verifyToken", () => {
   it("returns AuthUser for valid token", async () => {
     const token = await signToken({
-      sub: "engineer",
-      user_id: 1,
+      sub: "1",
+      username: "engineer",
       role: "engineer",
       store_id: null,
     });
@@ -45,7 +45,7 @@ describe("fastapiProvider.verifyToken", () => {
 
   it("returns null for expired token", async () => {
     const token = await signToken(
-      { sub: "engineer", user_id: 1, role: "engineer", store_id: null },
+      { sub: "1", username: "engineer", role: "engineer", store_id: null },
       "0s" // expires immediately
     );
 
@@ -59,7 +59,7 @@ describe("fastapiProvider.verifyToken", () => {
   it("returns null for token signed with wrong secret", async () => {
     const wrongSecret = new TextEncoder().encode("wrong-secret-totally-different");
     const { SignJWT: Signer } = await import("jose");
-    const token = await new Signer({ sub: "hacker", user_id: 99, role: "admin", store_id: null })
+    const token = await new Signer({ sub: "99", username: "hacker", role: "admin", store_id: null })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("8h")
       .sign(wrongSecret);
@@ -75,8 +75,8 @@ describe("fastapiProvider.verifyToken", () => {
 
   it("maps store_manager with storeId correctly", async () => {
     const token = await signToken({
-      sub: "store_manager",
-      user_id: 5,
+      sub: "5",
+      username: "store_manager",
       role: "store_manager",
       store_id: 3,
     });
