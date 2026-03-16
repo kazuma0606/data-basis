@@ -13,6 +13,8 @@ data:
   BACKEND_URL: "http://backend.technomart.svc.cluster.local:8000"
   NEXT_TELEMETRY_DISABLED: "1"
   NODE_ENV: "production"
+  # HTTP アクセス時はクッキーの Secure フラグを無効化（本番 HTTPS では "true" に変更）
+  SECURE_COOKIES: "false"
 ---
 # ── Secret: 機密情報 ───────────────────────────────────────────
 # 本番では kubectl create secret generic frontend-secret \
