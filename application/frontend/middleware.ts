@@ -18,9 +18,12 @@ export { ROLE_HOME };
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow Next.js internals and API auth routes (except signin check below)
+  // Allow Next.js internals, static files, and API proxy routes
+  // /api/ops/* and /api/business/* handle their own auth via apiFetch
   if (
     pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/ops/") ||
+    pathname.startsWith("/api/business/") ||
     pathname.startsWith("/api/auth/signout") ||
     pathname.startsWith("/api/auth/me") ||
     pathname === "/"

@@ -84,7 +84,10 @@ docker build -t technomart-backend:latest "$APP_DIR/backend"
 
 # k3s にインポート
 echo "  k3s にインポート中..."
-docker save technomart-backend:latest | k3s ctr images import -
+docker save technomart-backend:latest | sudo k3s ctr images import -
+
+# 古い Docker イメージを削除
+docker image prune -f
 
 # JWT_SECRET_KEY が未設定の場合は生成して Secret を作成
 if ! kubectl get secret backend-secret -n "$NAMESPACE" &>/dev/null; then
@@ -113,7 +116,10 @@ docker build -t technomart-frontend:latest "$APP_DIR/frontend"
 
 # k3s にインポート
 echo "  k3s にインポート中..."
-docker save technomart-frontend:latest | k3s ctr images import -
+docker save technomart-frontend:latest | sudo k3s ctr images import -
+
+# 古い Docker イメージを削除
+docker image prune -f
 
 # AUTH_COOKIE_SECRET が未設定の場合は生成して Secret を作成
 if ! kubectl get secret frontend-secret -n "$NAMESPACE" &>/dev/null; then
