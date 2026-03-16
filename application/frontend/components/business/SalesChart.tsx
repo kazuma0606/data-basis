@@ -6,15 +6,28 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import type { SalesByChannel } from "@/lib/types";
 
 interface SalesChartProps {
   data: SalesByChannel[];
 }
+
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 /** チャネル別日次売上をバーチャートで表示 */
 export function SalesChart({ data }: SalesChartProps) {
@@ -29,13 +42,15 @@ export function SalesChart({ data }: SalesChartProps) {
   const channels = [...new Set(data.map((d) => d.channel))];
   const chartData = [...byDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14) // 直近14日
-    .map(([date, vals]) => ({
-      date: date.slice(5), // "MM-DD"
-      ...vals,
-    }));
+    .slice(-14)
+    .map(([date, vals]) => ({ date: date.slice(5), ...vals }));
 
-  const COLORS = ["oklch(0.7 0.15 180)", "oklch(0.75 0.15 85)", "oklch(0.65 0.2 280)"];
+  const chartConfig = Object.fromEntries(
+    channels.map((ch, i) => [
+      ch,
+      { label: ch, color: CHART_COLORS[i % CHART_COLORS.length] },
+    ])
+  ) satisfies ChartConfig;
 
   if (chartData.length === 0) {
     return (
@@ -46,28 +61,33 @@ export function SalesChart({ data }: SalesChartProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ChartContainer config={chartConfig} className="h-56 w-full">
       <BarChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0 0)" />
-        <XAxis dataKey="date" tick={{ fontSize: 11, fill: "oklch(0.65 0 0)" }} />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
         <YAxis
-          tick={{ fontSize: 11, fill: "oklch(0.65 0 0)" }}
+          tickLine={false}
+          axisLine={false}
+          tick={{ fontSize: 11 }}
           tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
         />
-        <Tooltip
-          contentStyle={{
-            backgroundColor: "oklch(0.14 0 0)",
-            border: "1px solid oklch(0.25 0 0)",
-            borderRadius: "6px",
-            fontSize: 12,
-          }}
-          formatter={(value: number) => [`¥${value.toLocaleString("ja-JP")}`, ""]}
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              formatter={(value) => [`¥${Number(value).toLocaleString("ja-JP")}`, ""]}
+            />
+          }
         />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
-        {channels.map((ch, i) => (
-          <Bar key={ch} dataKey={ch} name={ch} fill={COLORS[i % COLORS.length]} radius={[2, 2, 0, 0]} />
+        <ChartLegend content={<ChartLegendContent />} />
+        {channels.map((ch) => (
+          <Bar
+            key={ch}
+            dataKey={ch}
+            fill={`var(--color-${ch})`}
+            radius={[2, 2, 0, 0]}
+          />
         ))}
       </BarChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }

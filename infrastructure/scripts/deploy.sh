@@ -74,9 +74,9 @@ kubectl exec -n "$NAMESPACE" "$OLLAMA_POD" -- ollama pull nomic-embed-text
 kubectl exec -n "$NAMESPACE" "$OLLAMA_POD" -- ollama pull gemma2
 echo "  OK: Ollama @ http://192.168.56.10:31434"
 
-# ── [7/7] Backend (FastAPI) ───────────────────────────────
+# ── [7/8] Backend (FastAPI) ───────────────────────────────
 echo ""
-echo "[7/7] Backend (FastAPI)..."
+echo "[7/8] Backend (FastAPI)..."
 
 # イメージビルド
 echo "  Docker イメージをビルド中..."
@@ -103,6 +103,31 @@ kubectl apply -f "$K8S_DIR/backend/manifest.yaml"
 kubectl rollout status deployment/backend -n "$NAMESPACE" --timeout=3m
 echo "  OK: Backend API @ http://192.168.56.10:30800"
 
+# ── [8/8] Frontend (Next.js) ──────────────────────────────
+echo ""
+echo "[8/8] Frontend (Next.js)..."
+
+# イメージビルド
+echo "  Docker イメージをビルド中..."
+docker build -t technomart-frontend:latest "$APP_DIR/frontend"
+
+# k3s にインポート
+echo "  k3s にインポート中..."
+docker save technomart-frontend:latest | k3s ctr images import -
+
+# AUTH_COOKIE_SECRET が未設定の場合は生成して Secret を作成
+if ! kubectl get secret frontend-secret -n "$NAMESPACE" &>/dev/null; then
+  echo "  frontend-secret を生成中..."
+  COOKIE_SECRET=$(openssl rand -hex 32)
+  kubectl create secret generic frontend-secret \
+    --from-literal=AUTH_COOKIE_SECRET="$COOKIE_SECRET" \
+    -n "$NAMESPACE"
+fi
+
+kubectl apply -f "$K8S_DIR/frontend/manifest.yaml"
+kubectl rollout status deployment/frontend -n "$NAMESPACE" --timeout=3m
+echo "  OK: Frontend @ http://192.168.56.10:30300"
+
 # ── 完了確認 ──────────────────────────────────────────────
 echo ""
 echo "======================================================"
@@ -117,5 +142,6 @@ echo "  ClickHouse   192.168.56.10:30823  (HTTP) / :30900 (native)"
 echo "  LocalStack   http://192.168.56.10:31566  (S3: technomart-datalake)"
 echo "  Ollama       http://192.168.56.10:31434"
 echo "  Backend API  http://192.168.56.10:30800  (docs: /docs)"
+echo "  Frontend     http://192.168.56.10:30300"
 echo ""
 kubectl get pods -n "$NAMESPACE"

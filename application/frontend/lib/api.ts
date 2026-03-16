@@ -11,6 +11,18 @@ export class ApiError extends Error {
   }
 }
 
+export function isApiError(err: unknown): err is ApiError {
+  return err instanceof ApiError;
+}
+
+export function isNotFound(err: unknown): boolean {
+  return isApiError(err) && err.status === 404;
+}
+
+export function isUnauthorized(err: unknown): boolean {
+  return isApiError(err) && err.status === 401;
+}
+
 /**
  * Server-side fetch wrapper for the FastAPI backend.
  * Reads the session cookie and attaches it as Bearer token.

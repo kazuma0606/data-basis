@@ -150,16 +150,16 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 4-1 | `app/business/layout.tsx` — サイドバー（Summary/Customers/Segments/Affinity/Query）・ヘッダー | [ ] |
-| 4-2 | `app/business/summary/page.tsx` — KPIカード（アクティブ顧客数・チャーン率・週次売上）+ 売上推移チャート | [ ] |
-| 4-3 | `app/business/customers/page.tsx` — 顧客一覧（セグメントフィルタ・ページネーション・URL searchParams管理） | [ ] |
-| 4-4 | `app/business/customers/[id]/page.tsx` — 顧客詳細（チャーンラベル・スコア・サジェスト商品） | [ ] |
-| 4-5 | `app/business/segments/page.tsx` — セグメント分布（円グラフ）+ 週次推移（折れ線グラフ） | [ ] |
-| 4-6 | `app/business/affinity/page.tsx` — カテゴリ親和性ヒートマップ（属性×カテゴリ） | [ ] |
-| 4-7 | `app/business/query/page.tsx` — 自然言語クエリUI（入力欄・送信・回答表示） | [ ] |
-| 4-8 | `tests/component/business/*.test.tsx` — 各Businessページのレンダリング検証（fetch mock） | [ ] |
-| 4-9 | `tests/e2e/business.spec.ts` — marketer でログイン → 各ページ表示・顧客詳細ナビゲーション | [ ] |
-| 4-10 | `tests/e2e/store_manager.spec.ts` — store_manager でログイン → 自店舗データのみ表示・engineer でアクセス → リダイレクト | [ ] |
+| 4-1 | `app/business/layout.tsx` — サイドバー（Summary/Customers/Segments/Affinity/Query）・ヘッダー | [x] |
+| 4-2 | `app/business/summary/page.tsx` — KPIカード（アクティブ顧客数・チャーン率・週次売上）+ 売上推移チャート | [x] |
+| 4-3 | `app/business/customers/page.tsx` — 顧客一覧（セグメントフィルタ・ページネーション・URL searchParams管理） | [x] |
+| 4-4 | `app/business/customers/[id]/page.tsx` — 顧客詳細（チャーンラベル・スコア・サジェスト商品） | [x] |
+| 4-5 | `app/business/segments/page.tsx` — セグメント分布（円グラフ）+ 週次推移（折れ線グラフ） | [x] |
+| 4-6 | `app/business/affinity/page.tsx` — カテゴリ親和性ヒートマップ（属性×カテゴリ） | [x] |
+| 4-7 | `app/business/query/page.tsx` — 自然言語クエリUI（入力欄・送信・回答表示） | [x] |
+| 4-8 | `tests/component/business/*.test.tsx` — 各Businessページのレンダリング検証（fetch mock） | [x] |
+| 4-9 | `tests/e2e/business.spec.ts` — marketer でログイン → 各ページ表示・顧客詳細ナビゲーション | [x] |
+| 4-10 | `tests/e2e/store_manager.spec.ts` — store_manager でログイン → 自店舗データのみ表示・engineer でアクセス → リダイレクト | [x] |
 
 ---
 
@@ -167,11 +167,11 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 5-1 | `app/error.tsx` / 各ルートの `error.tsx` — エラー境界（API障害時のフォールバックUI） | [ ] |
-| 5-2 | `app/loading.tsx` / 各ルートの `loading.tsx` — Suspenseベースのローディング骨格（Skeleton） | [ ] |
-| 5-3 | `lib/api.ts` の型安全強化 — レスポンス型の厳密化・エラー型の統一 | [ ] |
-| 5-4 | チャートコンポーネントの整備（ShadCN Charts で折れ線・棒・円グラフを共通化） | [ ] |
-| 5-5 | `tests/e2e/resilience.spec.ts` — バックエンドエラー時のフォールバックUI表示確認 | [ ] |
+| 5-1 | `app/error.tsx` / 各ルートの `error.tsx` — エラー境界（API障害時のフォールバックUI） | [x] |
+| 5-2 | `app/loading.tsx` / 各ルートの `loading.tsx` — Suspenseベースのローディング骨格（Skeleton） | [x] |
+| 5-3 | `lib/api.ts` の型安全強化 — レスポンス型の厳密化・エラー型の統一 | [x] |
+| 5-4 | チャートコンポーネントの整備（ShadCN Charts で折れ線・棒・円グラフを共通化） | [x] |
+| 5-5 | `tests/e2e/resilience.spec.ts` — バックエンドエラー時のフォールバックUI表示確認 | [x] |
 
 ---
 
@@ -181,7 +181,7 @@ lib/auth/
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 6-1 | `application/frontend/Dockerfile` — Next.js standalone ビルドのマルチステージ構成 | [ ] |
-| 6-2 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort:30300 + ConfigMap（BACKEND_URL等） | [ ] |
-| 6-3 | `infrastructure/scripts/deploy.sh` にフロントエンドのビルド・インポート・apply を追記 | [ ] |
+| 6-1 | `application/frontend/Dockerfile` — Next.js standalone ビルドのマルチステージ構成 | [x] |
+| 6-2 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort:30300 + ConfigMap（BACKEND_URL等） | [x] |
+| 6-3 | `infrastructure/scripts/deploy.sh` にフロントエンドのビルド・インポート・apply を追記 | [x] |
 | 6-4 | VM上でビルド・k3sインポート・rollout確認・ブラウザ疎通確認（http://192.168.56.10:30300） | [ ] |

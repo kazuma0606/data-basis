@@ -4,35 +4,35 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
-  Legend,
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import type { SegmentSummary, SegmentTrend } from "@/lib/types";
 
-const SEGMENT_COLORS: Record<string, string> = {
-  active:  "oklch(0.7 0.15 180)",
-  dormant: "oklch(0.75 0.15 85)",
-  churned: "oklch(0.6 0.2 25)",
-};
-const FALLBACK_COLORS = [
-  "oklch(0.7 0.15 180)",
-  "oklch(0.75 0.15 85)",
-  "oklch(0.65 0.2 280)",
-  "oklch(0.7 0.2 25)",
-];
+const SEGMENT_CONFIG = {
+  active:  { label: "アクティブ", color: "var(--chart-1)" },
+  dormant: { label: "休眠",       color: "var(--chart-2)" },
+  churned: { label: "チャーン",   color: "var(--chart-4)" },
+} satisfies ChartConfig;
 
-const TOOLTIP_STYLE = {
-  backgroundColor: "oklch(0.14 0 0)",
-  border: "1px solid oklch(0.25 0 0)",
-  borderRadius: "6px",
-  fontSize: 12,
-};
+const FALLBACK_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
 interface PieProps {
   data: SegmentSummary[];
@@ -46,8 +46,20 @@ export function SegmentPieChart({ data }: PieProps) {
       </div>
     );
   }
+
+  const config: ChartConfig = Object.fromEntries(
+    data.map((d, i) => [
+      d.label,
+      {
+        label: SEGMENT_CONFIG[d.label as keyof typeof SEGMENT_CONFIG]?.label ?? d.label,
+        color: SEGMENT_CONFIG[d.label as keyof typeof SEGMENT_CONFIG]?.color
+          ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length],
+      },
+    ])
+  );
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ChartContainer config={config} className="h-56 w-full">
       <PieChart>
         <Pie
           data={data}
@@ -57,21 +69,22 @@ export function SegmentPieChart({ data }: PieProps) {
           cy="50%"
           outerRadius={80}
           label={({ label, percentage }) =>
-            `${label} ${percentage.toFixed(1)}%`
+            `${SEGMENT_CONFIG[label as keyof typeof SEGMENT_CONFIG]?.label ?? label} ${percentage.toFixed(1)}%`
           }
           labelLine={false}
         >
           {data.map((entry, i) => (
             <Cell
               key={entry.label}
-              fill={SEGMENT_COLORS[entry.label] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]}
+              fill={`var(--color-${entry.label})`}
+              style={{ "--color-fallback": FALLBACK_COLORS[i % FALLBACK_COLORS.length] } as React.CSSProperties}
             />
           ))}
         </Pie>
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
       </PieChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }
 
@@ -100,25 +113,36 @@ export function SegmentTrendChart({ data }: TrendProps) {
     );
   }
 
+  const config: ChartConfig = Object.fromEntries(
+    labels.map((label, i) => [
+      label,
+      {
+        label: SEGMENT_CONFIG[label as keyof typeof SEGMENT_CONFIG]?.label ?? label,
+        color: SEGMENT_CONFIG[label as keyof typeof SEGMENT_CONFIG]?.color
+          ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length],
+      },
+    ])
+  );
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ChartContainer config={config} className="h-56 w-full">
       <LineChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.25 0 0)" />
-        <XAxis dataKey="week" tick={{ fontSize: 11, fill: "oklch(0.65 0 0)" }} />
-        <YAxis tick={{ fontSize: 11, fill: "oklch(0.65 0 0)" }} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
-        {labels.map((label, i) => (
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="week" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+        <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11 }} />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <ChartLegend content={<ChartLegendContent />} />
+        {labels.map((label) => (
           <Line
             key={label}
             type="monotone"
             dataKey={label}
-            stroke={SEGMENT_COLORS[label] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]}
+            stroke={`var(--color-${label})`}
             strokeWidth={2}
             dot={false}
           />
         ))}
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 }
