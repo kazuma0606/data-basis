@@ -124,7 +124,7 @@ s3://technomart-datalake/
 
 ```
 data-basis/
-  plan/               # 設計ドキュメント
+  v1.0/               # 設計ドキュメント
   terraform/          # インフラ定義（LocalStack provider）
   k8s/                # Kubernetesマニフェスト
   kafka/              # Kafkaトピック・コネクタ設定
