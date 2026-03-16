@@ -6,7 +6,8 @@ from datetime import date, datetime
 class ChurnLabel:
     unified_id: int
     label: str  # 'active' / 'dormant' / 'churned'
-    score: float
+    last_purchase_at: datetime | None
+    days_since_purchase: int | None
     updated_at: datetime
 
 

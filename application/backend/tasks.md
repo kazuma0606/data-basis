@@ -130,33 +130,33 @@ JWT_EXPIRE_MINUTES=480
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 4-1 | `app/infrastructure/database/models.py` — unified_customers, customer_source_map, churn_labels, customer_scores ORMモデル追記 | [ ] |
-| 4-2 | `app/interfaces/repositories/customer_repository.py` — ICustomerRepository Protocol（find_by_id, find_all, search） | [ ] |
-| 4-3 | `app/infrastructure/repositories/postgres_customer_repository.py` — ICustomerRepository 実装（churn_labels / customer_scores JOIN含む） | [ ] |
-| 4-4 | `app/use_cases/business/list_customers.py` — 顧客一覧取得。store_manager ロールの場合は store_id でフィルタ | [ ] |
-| 4-5 | `app/use_cases/business/get_customer.py` — 顧客詳細（チャネル横断の購買履歴・スコア） | [ ] |
-| 4-6 | `app/interfaces/repositories/analytics_repository.py` — IAnalyticsRepository Protocol | [ ] |
-| 4-7 | `app/infrastructure/repositories/clickhouse_analytics_repository.py` — ec_events / pos_transactions / churn_summary_weekly 等のクエリ実装 | [ ] |
-| 4-8 | `app/use_cases/business/get_summary.py` — KPIサマリ（アクティブ顧客数・チャーン率・週次売上推移） | [ ] |
-| 4-9 | `app/use_cases/business/get_segment_summary.py` — active/dormant/churned の分布 | [ ] |
-| 4-10 | `app/use_cases/business/get_segment_trend.py` — セグメント週次推移（churn_summary_weekly から取得） | [ ] |
-| 4-11 | `app/use_cases/business/get_sales_analytics.py` — チャネル別・カテゴリ別売上（sales_by_channel から取得） | [ ] |
-| 4-12 | `app/use_cases/business/get_affinity.py` — 属性×カテゴリの親和性ヒートマップ（category_affinity_summary から取得） | [ ] |
-| 4-13 | `app/interfaces/clients/llm_client.py` — ILLMClient Protocol（`generate(prompt: str) -> str`, `embed(text: str) -> list[float]`） | [ ] |
-| 4-14 | `app/infrastructure/clients/ollama_client.py` — httpx で Ollama REST API を呼び出す ILLMClient 実装（qwen2.5:3b / nomic-embed-text） | [ ] |
-| 4-15 | `app/infrastructure/repositories/postgres_product_repository.py` — pgvector 類似検索（`embedding <-> $1` クエリ） | [ ] |
-| 4-16 | `app/use_cases/business/get_recommendations.py` — nomic-embed-text で顧客Embeddingを生成 → pgvector で類似商品を返す | [ ] |
-| 4-17 | `app/use_cases/business/natural_language_query.py` — 日本語クエリをqwen2.5:3bに投げ、スキーマ情報をプロンプトに含めてSQL/回答を生成 | [ ] |
-| 4-18 | `app/presentation/schemas/business.py` — CustomerList, CustomerDetail, SegmentSummary, SalesTrend, AffinityMatrix, NLQueryResponse | [ ] |
-| 4-19 | `app/presentation/routers/business.py` — GET /business/summary, /customers, /customers/{id}, /customers/{id}/recommendations, /segments/summary, /segments/trend, /analytics/sales, /analytics/affinity, POST /business/query | [ ] |
-| 4-20 | `tests/unit/use_cases/business/test_list_customers.py` — store_managerは自store_idのみ / marketerは全件 / ページネーション | [ ] |
-| 4-21 | `tests/unit/use_cases/business/test_get_customer.py` | [ ] |
-| 4-22 | `tests/unit/use_cases/business/test_get_recommendations.py` — pgvector検索結果の件数・順序を検証 | [ ] |
-| 4-23 | `tests/unit/use_cases/business/test_natural_language_query.py` — Ollamaモックが返したテキストがレスポンスに含まれること | [ ] |
-| 4-24 | `tests/integration/repositories/test_postgres_customer_repository.py` — unified_customers CRUD / churn_labels JOIN / pgvector 類似検索 | [ ] |
-| 4-25 | `tests/integration/repositories/test_clickhouse_analytics_repository.py` — 集計クエリ・フィルタの検証 | [ ] |
-| 4-26 | `tests/integration/clients/test_ollama_client.py` — /api/generate / /api/embeddings 呼び出し | [ ] |
-| 4-27 | `tests/e2e/test_business_endpoints.py` — store_managerが他店舗データを取得できないこと / 顧客詳細の全フィールド検証 / ロール別アクセス制御 | [ ] |
+| 4-1 | `app/infrastructure/database/models.py` — unified_customers, customer_source_map, churn_labels, customer_scores ORMモデル追記 | [x] |
+| 4-2 | `app/interfaces/repositories/customer_repository.py` — ICustomerRepository Protocol（find_by_id, find_all, search） | [x] |
+| 4-3 | `app/infrastructure/repositories/postgres_customer_repository.py` — ICustomerRepository 実装（churn_labels / customer_scores JOIN含む） | [x] |
+| 4-4 | `app/use_cases/business/list_customers.py` — 顧客一覧取得。store_manager ロールの場合は store_id でフィルタ | [x] |
+| 4-5 | `app/use_cases/business/get_customer.py` — 顧客詳細（チャネル横断の購買履歴・スコア） | [x] |
+| 4-6 | `app/interfaces/repositories/analytics_repository.py` — IAnalyticsRepository Protocol | [x] |
+| 4-7 | `app/infrastructure/repositories/clickhouse_analytics_repository.py` — ec_events / pos_transactions / churn_summary_weekly 等のクエリ実装 | [x] |
+| 4-8 | `app/use_cases/business/get_summary.py` — KPIサマリ（アクティブ顧客数・チャーン率・週次売上推移） | [x] |
+| 4-9 | `app/use_cases/business/get_segment_summary.py` — active/dormant/churned の分布 | [x] |
+| 4-10 | `app/use_cases/business/get_segment_trend.py` — セグメント週次推移（churn_summary_weekly から取得） | [x] |
+| 4-11 | `app/use_cases/business/get_sales_analytics.py` — チャネル別・カテゴリ別売上（sales_by_channel から取得） | [x] |
+| 4-12 | `app/use_cases/business/get_affinity.py` — 属性×カテゴリの親和性ヒートマップ（category_affinity_summary から取得） | [x] |
+| 4-13 | `app/interfaces/clients/llm_client.py` — ILLMClient Protocol（`generate(prompt: str) -> str`, `embed(text: str) -> list[float]`） | [x] |
+| 4-14 | `app/infrastructure/clients/ollama_client.py` — httpx で Ollama REST API を呼び出す ILLMClient 実装（qwen2.5:3b / nomic-embed-text） | [x] |
+| 4-15 | `app/infrastructure/repositories/postgres_product_repository.py` — pgvector 類似検索（`embedding <-> $1` クエリ） | [x] |
+| 4-16 | `app/use_cases/business/get_recommendations.py` — nomic-embed-text で顧客Embeddingを生成 → pgvector で類似商品を返す | [x] |
+| 4-17 | `app/use_cases/business/natural_language_query.py` — 日本語クエリをqwen2.5:3bに投げ、スキーマ情報をプロンプトに含めてSQL/回答を生成 | [x] |
+| 4-18 | `app/presentation/schemas/business.py` — CustomerList, CustomerDetail, SegmentSummary, SalesTrend, AffinityMatrix, NLQueryResponse | [x] |
+| 4-19 | `app/presentation/routers/business.py` — GET /business/summary, /customers, /customers/{id}, /customers/{id}/recommendations, /segments/summary, /segments/trend, /analytics/sales, /analytics/affinity, POST /business/query | [x] |
+| 4-20 | `tests/unit/use_cases/business/test_list_customers.py` — store_managerは自store_idのみ / marketerは全件 / ページネーション | [x] |
+| 4-21 | `tests/unit/use_cases/business/test_get_customer.py` | [x] |
+| 4-22 | `tests/unit/use_cases/business/test_get_recommendations.py` — pgvector検索結果の件数・順序を検証 | [x] |
+| 4-23 | `tests/unit/use_cases/business/test_natural_language_query.py` — Ollamaモックが返したテキストがレスポンスに含まれること | [x] |
+| 4-24 | `tests/integration/repositories/test_postgres_customer_repository.py` — unified_customers CRUD / churn_labels JOIN / pgvector 類似検索 | [x] |
+| 4-25 | `tests/integration/repositories/test_clickhouse_analytics_repository.py` — 集計クエリ・フィルタの検証 | [x] |
+| 4-26 | `tests/integration/clients/test_ollama_client.py` — /api/generate / /api/embeddings 呼び出し | [x] |
+| 4-27 | `tests/e2e/test_business_endpoints.py` — store_managerが他店舗データを取得できないこと / 顧客詳細の全フィールド検証 / ロール別アクセス制御 | [x] |
 
 ---
 

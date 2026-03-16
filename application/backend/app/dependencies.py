@@ -8,14 +8,22 @@ from app.domain.entities.user import AuthUser
 from app.domain.exceptions import ForbiddenError, UnauthorizedError
 from app.config import settings
 from app.infrastructure.clients.kafka_admin_client import KafkaAdminClientImpl
+from app.infrastructure.clients.ollama_client import OllamaClient
 from app.infrastructure.database.clickhouse import ch_query
 from app.infrastructure.database.postgres import async_session_factory, get_db
 from app.infrastructure.database.redis import get_redis
+from app.infrastructure.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
+from app.infrastructure.repositories.postgres_customer_repository import PostgresCustomerRepository
 from app.infrastructure.repositories.postgres_job_repository import PostgresJobRepository
+from app.infrastructure.repositories.postgres_product_repository import PostgresProductRepository
 from app.infrastructure.repositories.postgres_schema_repository import PostgresSchemaRepository
 from app.infrastructure.repositories.postgres_user_repository import PostgresUserRepository
 from app.interfaces.clients.kafka_client import IKafkaAdminClient
+from app.interfaces.clients.llm_client import ILLMClient
+from app.interfaces.repositories.analytics_repository import IAnalyticsRepository
+from app.interfaces.repositories.customer_repository import ICustomerRepository
 from app.interfaces.repositories.job_repository import IJobRepository
+from app.interfaces.repositories.product_repository import IProductRepository
 from app.interfaces.repositories.schema_repository import ISchemaRepository
 from app.interfaces.repositories.user_repository import IUserRepository
 from app.use_cases.auth.login import LoginUseCase
@@ -86,6 +94,28 @@ def get_health_check_use_case(
         "redis": check_redis,
         "ollama": check_ollama,
     })
+
+
+# ── Business: 顧客・分析・LLM ─────────────────────────────
+
+def get_customer_repository(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ICustomerRepository:
+    return PostgresCustomerRepository(db)
+
+
+def get_analytics_repository() -> IAnalyticsRepository:
+    return ClickHouseAnalyticsRepository()
+
+
+def get_product_repository(
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> IProductRepository:
+    return PostgresProductRepository(db)
+
+
+def get_llm_client() -> ILLMClient:
+    return OllamaClient()
 
 
 # ── 認証・認可 ────────────────────────────────────────────
