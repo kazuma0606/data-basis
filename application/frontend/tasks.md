@@ -184,4 +184,4 @@ lib/auth/
 | 6-1 | `application/frontend/Dockerfile` — Next.js standalone ビルドのマルチステージ構成 | [x] |
 | 6-2 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort:30300 + ConfigMap（BACKEND_URL等） | [x] |
 | 6-3 | `infrastructure/scripts/deploy.sh` にフロントエンドのビルド・インポート・apply を追記 | [x] |
-| 6-4 | VM上でビルド・k3sインポート・rollout確認・ブラウザ疎通確認（http://192.168.56.10:30300） | [ ] |
+| 6-4 | VM上でビルド・k3sインポート・rollout確認・ブラウザ疎通確認（http://192.168.56.10:30300） | [x] |
