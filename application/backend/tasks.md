@@ -61,23 +61,23 @@ JWT_EXPIRE_MINUTES=480
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 1-1 | `pyproject.toml` — 依存パッケージ定義（fastapi, sqlalchemy[asyncio], asyncpg, clickhouse-driver, kafka-python-ng, redis, httpx, python-jose, structlog, boto3） | [ ] |
-| 1-2 | `app/config.py` — Pydantic BaseSettings。DB接続情報・JWT秘密鍵・Ollama URL等を環境変数から読み込み | [ ] |
-| 1-3 | `app/domain/value_objects/role.py` — Role Enum（admin/engineer/marketer/store_manager）と `can_access_ops()` / `can_access_business()` メソッド | [ ] |
-| 1-4 | `app/domain/value_objects/score.py` — ScoreRange（0〜100バリデーション付き） | [ ] |
-| 1-5 | `app/domain/value_objects/pagination.py` — Pagination値オブジェクト（page, per_page, total） | [ ] |
-| 1-6 | `app/domain/entities/user.py` — AuthUser（unified_id, role, store_id） | [ ] |
-| 1-7 | `app/domain/entities/customer.py` — UnifiedCustomer, ChurnLabel, CustomerScore | [ ] |
-| 1-8 | `app/domain/entities/segment.py` — SegmentLabel Enum（active/dormant/churned） | [ ] |
-| 1-9 | `app/domain/exceptions.py` — NotFoundError, UnauthorizedError, ForbiddenError | [ ] |
-| 1-10 | `app/shared/jwt.py` — `encode_token(user: AuthUser) -> str` / `decode_token(token: str) -> AuthUser`（python-jose使用） | [ ] |
-| 1-11 | `app/shared/logging.py` — structlogベースの構造化ロガー設定 | [ ] |
-| 1-12 | `app/infrastructure/database/postgres.py` — SQLAlchemy AsyncSession ファクトリ・`get_db` 依存関数・接続確認 | [ ] |
-| 1-13 | `app/infrastructure/database/clickhouse.py` — clickhouse-driver を `asyncio.to_thread` でラップ・接続確認 | [ ] |
-| 1-14 | `app/infrastructure/database/redis.py` — redis-py async クライアント・接続確認 | [ ] |
-| 1-15 | `app/main.py` — FastAPIアプリ骨格（CORS設定、グローバル例外ハンドラ、ルーター未登録でも `/healthz` が返る状態） | [ ] |
-| 1-16 | `tests/unit/domain/test_role.py` — Role の各メソッド検証 | [ ] |
-| 1-17 | `tests/unit/domain/test_score.py` — ScoreRange のバリデーション検証 | [ ] |
+| 1-1 | `pyproject.toml` — 依存パッケージ定義（fastapi, sqlalchemy[asyncio], asyncpg, clickhouse-driver, kafka-python-ng, redis, httpx, python-jose, structlog, boto3） | [x] |
+| 1-2 | `app/config.py` — Pydantic BaseSettings。DB接続情報・JWT秘密鍵・Ollama URL等を環境変数から読み込み | [x] |
+| 1-3 | `app/domain/value_objects/role.py` — Role Enum（admin/engineer/marketer/store_manager）と `can_access_ops()` / `can_access_business()` メソッド | [x] |
+| 1-4 | `app/domain/value_objects/score.py` — ScoreRange（0〜100バリデーション付き） | [x] |
+| 1-5 | `app/domain/value_objects/pagination.py` — Pagination値オブジェクト（page, per_page, total） | [x] |
+| 1-6 | `app/domain/entities/user.py` — AuthUser（unified_id, role, store_id） | [x] |
+| 1-7 | `app/domain/entities/customer.py` — UnifiedCustomer, ChurnLabel, CustomerScore | [x] |
+| 1-8 | `app/domain/entities/segment.py` — SegmentLabel Enum（active/dormant/churned） | [x] |
+| 1-9 | `app/domain/exceptions.py` — NotFoundError, UnauthorizedError, ForbiddenError | [x] |
+| 1-10 | `app/shared/jwt.py` — `encode_token(user: AuthUser) -> str` / `decode_token(token: str) -> AuthUser`（python-jose使用） | [x] |
+| 1-11 | `app/shared/logging.py` — structlogベースの構造化ロガー設定 | [x] |
+| 1-12 | `app/infrastructure/database/postgres.py` — SQLAlchemy AsyncSession ファクトリ・`get_db` 依存関数・接続確認 | [x] |
+| 1-13 | `app/infrastructure/database/clickhouse.py` — clickhouse-driver を `asyncio.to_thread` でラップ・接続確認 | [x] |
+| 1-14 | `app/infrastructure/database/redis.py` — redis-py async クライアント・接続確認 | [x] |
+| 1-15 | `app/main.py` — FastAPIアプリ骨格（CORS設定、グローバル例外ハンドラ、ルーター未登録でも `/healthz` が返る状態） | [x] |
+| 1-16 | `tests/unit/domain/test_role.py` — Role の各メソッド検証 | [x] |
+| 1-17 | `tests/unit/domain/test_score.py` — ScoreRange のバリデーション検証 | [x] |
 
 ---
 
@@ -171,4 +171,40 @@ JWT_EXPIRE_MINUTES=480
 | 5-5 | グローバル例外ハンドラの整備（NotFoundError→404, ForbiddenError→403, UnauthorizedError→401 に変換） | [ ] |
 | 5-6 | `tests/integration/repositories/test_postgres_schema_repository.py` | [ ] |
 | 5-7 | `tests/conftest.py` — 共通フィクスチャの整備（TestClient, DBセッション、テストユーザーのセットアップ/ティアダウン） | [ ] |
-| 5-8 | pytest-cov でカバレッジ計測・80%以上を目標に補完 | [ ] |
+| 5-8 | pytest-cov でカバレッジ計測・80%以上を目標に補完 | [x] |
+
+---
+
+## Phase 6: コンテナ化・k3sデプロイ
+
+> **本番対応方針**: ローカルはk3s、本番はEKS。マニフェストは共通で、接続先（環境変数）の差し替えのみで移行できる構成にする。
+
+| タスク | 内容 | 状態 |
+|---|---|---|
+| 6-1 | `application/backend/Dockerfile` — マルチステージビルド（builder: 依存インストール / runtime: 最小イメージ）。uvicorn で起動 | [x] |
+| 6-2 | `application/frontend/Dockerfile` — Next.js の standalone ビルドを使用したマルチステージビルド | [x] |
+| 6-3 | `application/backend/.env.example` をリポジトリにコミット。`.env` 本体は `.gitignore` で除外 | [x] |
+| 6-4 | `infrastructure/k8s/backend/manifest.yaml` — Deployment（レプリカ1）+ ClusterIP Service + ConfigMap（非機密設定）+ Secret（DB接続情報・JWT秘密鍵） | [x] |
+| 6-5 | `infrastructure/k8s/frontend/manifest.yaml` — Deployment + NodePort Service（フロントエンドはブラウザから直接アクセスするため NodePort） | [x] |
+| 6-6 | `infrastructure/k8s/backend/manifest.yaml` に `BACKEND_URL` 等の環境変数を Secret / ConfigMap から注入する設定を追加 | [x] |
+| 6-7 | `infrastructure/scripts/deploy.sh` にバックエンド・フロントエンドの apply を追記 | [x] |
+| 6-8 | VM上でイメージビルド（`docker build`）→ k3s のローカルレジストリへのインポート（`k3s ctr images import`）手順を確認・実施 | [x] |
+| 6-9 | `kubectl rollout status` で backend / frontend の起動を確認。`/healthz` エンドポイントで疎通確認 | [x] |
+| 6-10 | `infrastructure/NETWORK.md` にバックエンド・フロントエンドのポート情報を追記 | [x] |
+
+### ポート割り当て（予定）
+
+| サービス | NodePort |
+|---|---|
+| backend (FastAPI) | 30800 |
+| frontend (Next.js) | 30080 |
+
+### ローカル vs 本番の差分
+
+| 項目 | ローカル（k3s） | 本番（EKS） |
+|---|---|---|
+| イメージレジストリ | k3s ローカルインポート | ECR |
+| 機密情報 | k8s Secret（手動作成） | AWS Secrets Manager → External Secrets |
+| DB接続先 | k3s内 ClusterIP | RDS エンドポイント（環境変数のみ変更） |
+| ストレージ | LocalStack S3 | S3（エンドポイント変数のみ変更） |
+| マニフェスト変更 | なし（環境変数差し替えのみ） | なし |
