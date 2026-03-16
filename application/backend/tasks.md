@@ -164,13 +164,13 @@ JWT_EXPIRE_MINUTES=480
 
 | タスク | 内容 | 状態 |
 |---|---|---|
-| 5-1 | `app/presentation/middleware/logging_middleware.py` — リクエストID付与・リクエスト/レスポンスの構造化ログ出力 | [ ] |
-| 5-2 | `app/infrastructure/clients/redis_cache_client.py` — ICacheClient 実装（get/set/delete、TTL付き） | [ ] |
-| 5-3 | `app/interfaces/clients/cache_client.py` — ICacheClient Protocol | [ ] |
-| 5-4 | `get_customer` ユースケースに Redis cache-aside パターンを組み込み（Redis優先参照 → キャッシュミス時にPostgreSQLから取得） | [ ] |
-| 5-5 | グローバル例外ハンドラの整備（NotFoundError→404, ForbiddenError→403, UnauthorizedError→401 に変換） | [ ] |
-| 5-6 | `tests/integration/repositories/test_postgres_schema_repository.py` | [ ] |
-| 5-7 | `tests/conftest.py` — 共通フィクスチャの整備（TestClient, DBセッション、テストユーザーのセットアップ/ティアダウン） | [ ] |
+| 5-1 | `app/presentation/middleware/logging_middleware.py` — リクエストID付与・リクエスト/レスポンスの構造化ログ出力 | [x] |
+| 5-2 | `app/infrastructure/clients/redis_cache_client.py` — ICacheClient 実装（get/set/delete、TTL付き） | [x] |
+| 5-3 | `app/interfaces/clients/cache_client.py` — ICacheClient Protocol | [x] |
+| 5-4 | `get_customer` ユースケースに Redis cache-aside パターンを組み込み（Redis優先参照 → キャッシュミス時にPostgreSQLから取得） | [x] |
+| 5-5 | グローバル例外ハンドラの整備（NotFoundError→404, ForbiddenError→403, UnauthorizedError→401 に変換） | [x] |
+| 5-6 | `tests/integration/repositories/test_postgres_schema_repository.py` | [x] |
+| 5-7 | `tests/conftest.py` — 共通フィクスチャの整備（TestClient, DBセッション、テストユーザーのセットアップ/ティアダウン） | [x] |
 | 5-8 | pytest-cov でカバレッジ計測・80%以上を目標に補完 | [x] |
 
 ---

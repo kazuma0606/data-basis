@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.dependencies import (
     get_analytics_repository,
+    get_cache_client,
     get_customer_repository,
     get_llm_client,
     get_product_repository,
@@ -87,6 +88,17 @@ class FakeLLMClient:
         return [0.1] * 768
 
 
+class FakeCacheClient:
+    async def get(self, key: str) -> str | None:
+        return None
+
+    async def set(self, key: str, value: str, ttl_seconds: int = 86400) -> None:
+        pass
+
+    async def delete(self, key: str) -> None:
+        pass
+
+
 @pytest.fixture
 def marketer_client() -> TestClient:
     from app.dependencies import get_user_repository
@@ -97,6 +109,7 @@ def marketer_client() -> TestClient:
     app.dependency_overrides[get_analytics_repository] = lambda: FakeAnalyticsRepository()
     app.dependency_overrides[get_product_repository] = lambda: FakeProductRepository()
     app.dependency_overrides[get_llm_client] = lambda: FakeLLMClient()
+    app.dependency_overrides[get_cache_client] = lambda: FakeCacheClient()
 
     with TestClient(app) as c:
         yield c

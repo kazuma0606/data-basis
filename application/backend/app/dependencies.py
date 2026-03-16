@@ -9,6 +9,7 @@ from app.domain.exceptions import ForbiddenError, UnauthorizedError
 from app.config import settings
 from app.infrastructure.clients.kafka_admin_client import KafkaAdminClientImpl
 from app.infrastructure.clients.ollama_client import OllamaClient
+from app.infrastructure.clients.redis_cache_client import RedisCacheClient
 from app.infrastructure.database.clickhouse import ch_query
 from app.infrastructure.database.postgres import async_session_factory, get_db
 from app.infrastructure.database.redis import get_redis
@@ -18,6 +19,7 @@ from app.infrastructure.repositories.postgres_job_repository import PostgresJobR
 from app.infrastructure.repositories.postgres_product_repository import PostgresProductRepository
 from app.infrastructure.repositories.postgres_schema_repository import PostgresSchemaRepository
 from app.infrastructure.repositories.postgres_user_repository import PostgresUserRepository
+from app.interfaces.clients.cache_client import ICacheClient
 from app.interfaces.clients.kafka_client import IKafkaAdminClient
 from app.interfaces.clients.llm_client import ILLMClient
 from app.interfaces.repositories.analytics_repository import IAnalyticsRepository
@@ -116,6 +118,10 @@ def get_product_repository(
 
 def get_llm_client() -> ILLMClient:
     return OllamaClient()
+
+
+def get_cache_client() -> ICacheClient:
+    return RedisCacheClient()
 
 
 # ── 認証・認可 ────────────────────────────────────────────

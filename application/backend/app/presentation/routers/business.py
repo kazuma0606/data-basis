@@ -4,16 +4,18 @@ from fastapi import APIRouter, Depends, Query
 
 from app.dependencies import (
     get_analytics_repository,
+    get_cache_client,
     get_customer_repository,
     get_llm_client,
     get_product_repository,
     require_business_role,
 )
 from app.domain.entities.user import AuthUser
+from app.interfaces.clients.cache_client import ICacheClient
+from app.interfaces.clients.llm_client import ILLMClient
 from app.interfaces.repositories.analytics_repository import IAnalyticsRepository
 from app.interfaces.repositories.customer_repository import ICustomerRepository
 from app.interfaces.repositories.product_repository import IProductRepository
-from app.interfaces.clients.llm_client import ILLMClient
 from app.presentation.schemas.business import (
     CategoryAffinitySchema,
     CustomerDetailSchema,
@@ -99,8 +101,9 @@ async def get_customer(
     unified_id: int,
     _: BusinessUser,
     customer_repo: Annotated[ICustomerRepository, Depends(get_customer_repository)],
+    cache: Annotated[ICacheClient, Depends(get_cache_client)],
 ) -> CustomerDetailSchema:
-    customer = await GetCustomerUseCase(customer_repo).execute(unified_id)
+    customer = await GetCustomerUseCase(customer_repo, cache).execute(unified_id)
     return CustomerDetailSchema(
         unified_id=customer.unified_id,
         canonical_name=customer.canonical_name,

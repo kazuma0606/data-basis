@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.domain.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
 from app.presentation.middleware.auth_middleware import AuthMiddleware
+from app.presentation.middleware.logging_middleware import LoggingMiddleware
 from app.presentation.routers import auth as auth_router
 from app.presentation.routers import business as business_router
 from app.presentation.routers import ops as ops_router
@@ -19,6 +20,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,

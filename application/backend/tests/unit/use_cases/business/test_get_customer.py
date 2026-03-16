@@ -51,3 +51,42 @@ async def test_raises_not_found_when_missing() -> None:
     repo = FakeCustomerRepository(None)
     with pytest.raises(NotFoundError):
         await GetCustomerUseCase(repo).execute(999)
+
+
+async def test_cache_hit_skips_repo() -> None:
+    """キャッシュにデータがある場合、リポジトリを呼ばない"""
+    from tests.conftest import InMemoryCacheClient
+    from app.use_cases.business.get_customer import _to_json, _cache_key
+
+    customer = UnifiedCustomer(1, "Cached User", None, None, None, None)
+    cache = InMemoryCacheClient()
+    await cache.set(_cache_key(1), _to_json(customer))
+
+    class NeverCallRepo:
+        async def find_by_id(self, _: int) -> None:
+            raise AssertionError("should not be called")
+        async def find_all(self, **_) -> list:
+            return []
+        async def count(self, **_) -> int:
+            return 0
+
+    result = await GetCustomerUseCase(NeverCallRepo(), cache).execute(1)
+    assert result.unified_id == 1
+    assert result.canonical_name == "Cached User"
+
+
+async def test_cache_miss_fetches_from_repo_and_stores() -> None:
+    """キャッシュミスの場合、リポジトリから取得してキャッシュに書き込む"""
+    from tests.conftest import InMemoryCacheClient
+    from app.use_cases.business.get_customer import _cache_key
+
+    customer = UnifiedCustomer(2, "DB User", None, None, None, None)
+    repo = FakeCustomerRepository(customer)
+    cache = InMemoryCacheClient()
+
+    result = await GetCustomerUseCase(repo, cache).execute(2)
+    assert result.unified_id == 2
+
+    # キャッシュに書き込まれたことを確認
+    cached = await cache.get(_cache_key(2))
+    assert cached is not None
