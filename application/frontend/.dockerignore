@@ -1,0 +1,33 @@
+# ビルド成果物（Docker 内で生成するため不要）
+.next
+out
+
+# 依存パッケージ（Docker 内で npm ci するため不要）
+node_modules
+
+# 開発用設定
+.env.local
+.env.development
+.env*.local
+
+# Git
+.git
+.gitignore
+
+# エディタ・OS
+.DS_Store
+*.swp
+*.swo
+.vscode
+.idea
+Thumbs.db
+
+# テスト・型チェック（ビルドに不要）
+coverage
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# ドキュメント
+*.md

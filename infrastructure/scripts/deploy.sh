@@ -105,12 +105,16 @@ BACKEND_IMAGE="${REGISTRY}/technomart-backend:${TAG}"
 BACKEND_IMAGE_LATEST="${REGISTRY}/technomart-backend:latest"
 
 echo "  Docker イメージをビルド中... (${TAG})"
-docker build -t "$BACKEND_IMAGE" -t "$BACKEND_IMAGE_LATEST" "$APP_DIR/backend"
+DOCKER_BUILDKIT=1 docker build -t "$BACKEND_IMAGE" -t "$BACKEND_IMAGE_LATEST" "$APP_DIR/backend"
 
 echo "  レジストリに push 中..."
 docker push "$BACKEND_IMAGE"
 docker push "$BACKEND_IMAGE_LATEST"
 
+# 古いイメージを削除（latest と今回タグ以外の technomart-backend タグを削除）
+docker images "${REGISTRY}/technomart-backend" --format "{{.Tag}}" \
+  | grep -v -E "^(latest|${TAG})$" \
+  | xargs -r -I{} docker rmi "${REGISTRY}/technomart-backend:{}" 2>/dev/null || true
 docker image prune -f
 
 # Secret 生成（初回のみ）
@@ -142,12 +146,16 @@ FRONTEND_IMAGE="${REGISTRY}/technomart-frontend:${TAG}"
 FRONTEND_IMAGE_LATEST="${REGISTRY}/technomart-frontend:latest"
 
 echo "  Docker イメージをビルド中... (${TAG})"
-docker build -t "$FRONTEND_IMAGE" -t "$FRONTEND_IMAGE_LATEST" "$APP_DIR/frontend"
+DOCKER_BUILDKIT=1 docker build -t "$FRONTEND_IMAGE" -t "$FRONTEND_IMAGE_LATEST" "$APP_DIR/frontend"
 
 echo "  レジストリに push 中..."
 docker push "$FRONTEND_IMAGE"
 docker push "$FRONTEND_IMAGE_LATEST"
 
+# 古いイメージを削除（latest と今回タグ以外の technomart-frontend タグを削除）
+docker images "${REGISTRY}/technomart-frontend" --format "{{.Tag}}" \
+  | grep -v -E "^(latest|${TAG})$" \
+  | xargs -r -I{} docker rmi "${REGISTRY}/technomart-frontend:{}" 2>/dev/null || true
 docker image prune -f
 
 # Secret 生成（初回のみ）
@@ -188,3 +196,8 @@ kubectl get pods -n "$NAMESPACE"
 echo ""
 echo "デプロイ記録:"
 bash "$VERSIONS_DIR/status.sh"
+
+echo ""
+echo "ディスク使用状況:"
+df -h /
+docker system df

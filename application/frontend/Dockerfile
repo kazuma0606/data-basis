@@ -5,7 +5,8 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 
 # ─────────────────────────────────────────────────────────────
 # Stage 2: builder — Next.js standalone ビルド

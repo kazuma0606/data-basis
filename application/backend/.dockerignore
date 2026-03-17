@@ -1,0 +1,38 @@
+# Python キャッシュ・仮想環境
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv
+env
+
+# テスト・型チェック
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+coverage.xml
+*.cover
+
+# Git
+.git
+.gitignore
+
+# エディタ・OS
+.DS_Store
+*.swp
+*.swo
+.vscode
+.idea
+Thumbs.db
+
+# 環境変数
+.env
+.env.local
+.env.*
+
+# ドキュメント
+*.md
+docs/
