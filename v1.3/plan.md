@@ -5,6 +5,19 @@
 
 ---
 
+## 作業ルール
+
+**バージョンアップ作業を開始する前に必ずスナップショットを保存する。**
+
+```bash
+cd infrastructure/vagrant/production
+vagrant snapshot save "pre-v1.3"
+```
+
+理由: DiskPressure・誤操作・設定ミスでクラッシュした際に `vagrant snapshot restore pre-v1.3` で即座に復旧できる。
+
+---
+
 ## 方針
 
 エンタープライズ向けの実案件でも使える構成を目指す。

@@ -10,8 +10,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # 本番依存のみインストール（dev グループを除外）
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev
 
 # ── Stage 2: ランタイム ────────────────────────────────────────
 FROM python:3.12-slim AS runtime

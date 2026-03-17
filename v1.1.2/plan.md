@@ -17,6 +17,20 @@ v1.1.2 ではこれらを解消し、**安全で素早いデプロイフロー**
 
 ---
 
+## 作業ルール（v1.1.2 以降すべてのバージョンに適用）
+
+**バージョンアップ作業を開始する前に必ずスナップショットを保存する。**
+
+```bash
+cd infrastructure/vagrant/production
+vagrant snapshot save "pre-vX.Y.Z"
+```
+
+理由: DiskPressure・誤操作・設定ミスでクラッシュした際に `vagrant snapshot restore` で即座に復旧できる。
+タイミング: tasks.md のフェーズ-1 として毎バージョンの先頭に配置する。
+
+---
+
 ## 改善内容
 
 ### 1. `.dockerignore` を追加（最大効果・即効）
