@@ -2,6 +2,19 @@
 
 作成日: 2026-03-16
 
+## 作業ルール
+
+**バージョンアップ作業を開始する前に必ずスナップショットを保存する。**
+
+```bash
+cd infrastructure/vagrant/production
+vagrant snapshot save "pre-v1.2"
+```
+
+理由: DiskPressure・誤操作・設定ミスでクラッシュした際に `vagrant snapshot restore pre-v1.2` で即座に復旧できる。
+
+---
+
 ## 背景
 
 v1.0でローカルインフラの疎通確認が完了。

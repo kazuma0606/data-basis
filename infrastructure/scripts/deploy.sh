@@ -104,6 +104,10 @@ echo "[7/8] Backend (FastAPI)..."
 BACKEND_IMAGE="${REGISTRY}/technomart-backend:${TAG}"
 BACKEND_IMAGE_LATEST="${REGISTRY}/technomart-backend:latest"
 
+echo "  ビルド前クリーンアップ（Docker キャッシュ削除）..."
+docker system prune -af --volumes 2>/dev/null || true
+df -h / | tail -1
+
 echo "  Docker イメージをビルド中... (${TAG})"
 docker build -t "$BACKEND_IMAGE" -t "$BACKEND_IMAGE_LATEST" "$APP_DIR/backend"
 
@@ -111,7 +115,8 @@ echo "  レジストリに push 中..."
 docker push "$BACKEND_IMAGE"
 docker push "$BACKEND_IMAGE_LATEST"
 
-docker image prune -f
+echo "  ビルド後クリーンアップ（中間レイヤー削除）..."
+docker system prune -af 2>/dev/null || true
 
 # Secret 生成（初回のみ）
 if ! kubectl get secret backend-secret -n "$NAMESPACE" &>/dev/null; then
@@ -141,6 +146,10 @@ echo "[8/8] Frontend (Next.js)..."
 FRONTEND_IMAGE="${REGISTRY}/technomart-frontend:${TAG}"
 FRONTEND_IMAGE_LATEST="${REGISTRY}/technomart-frontend:latest"
 
+echo "  ビルド前クリーンアップ（Docker キャッシュ削除）..."
+docker system prune -af --volumes 2>/dev/null || true
+df -h / | tail -1
+
 echo "  Docker イメージをビルド中... (${TAG})"
 docker build -t "$FRONTEND_IMAGE" -t "$FRONTEND_IMAGE_LATEST" "$APP_DIR/frontend"
 
@@ -148,7 +157,8 @@ echo "  レジストリに push 中..."
 docker push "$FRONTEND_IMAGE"
 docker push "$FRONTEND_IMAGE_LATEST"
 
-docker image prune -f
+echo "  ビルド後クリーンアップ（中間レイヤー削除）..."
+docker system prune -af 2>/dev/null || true
 
 # Secret 生成（初回のみ）
 if ! kubectl get secret frontend-secret -n "$NAMESPACE" &>/dev/null; then
@@ -188,3 +198,8 @@ kubectl get pods -n "$NAMESPACE"
 echo ""
 echo "デプロイ記録:"
 bash "$VERSIONS_DIR/status.sh"
+
+echo ""
+echo "ディスク使用状況:"
+df -h /
+docker system df
