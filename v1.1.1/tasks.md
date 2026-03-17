@@ -44,15 +44,21 @@
   - `/technomart` マウントが Pod 内に存在することを確認
 
 ### ✅ フェーズ0 完了基準
-- [ ] SA トークンが Pod 内にマウントされていること
-- [ ] RBAC 設定前は 403 が返ること（権限なしを確認）
-- [ ] `versions/deployments.db` が Pod 内から見えること
+- [x] SA トークンが Pod 内にマウントされていること（ca.crt / namespace / token 確認）
+- [x] RBAC 設定前は 403 が返ること（権限なしを確認）
+- [x] `versions/deployments.db` の VM 上パスを確認（`/technomart/versions/deployments.db`）
+
+**フェーズ0 結果メモ**:
+- FastAPI `/ops/health` はアプリ疎通確認（PostgreSQL/ClickHouse/Kafka/Redis/Ollama）。auth 必須。`/api/healthz` との棲み分け OK。
+- SA トークンファイルは自動マウント済み ✓
+- デフォルト SA は 403 → Phase 1 の RBAC が必要 ✓
+- `versions/` は Pod 内から **見えない**（hostPath Volume mount が未設定）→ Phase 1 のマニフェスト変更で対応
 
 ---
 
 ## フェーズ1: RBAC + マニフェスト変更
 
-- [ ] **1-1. `infrastructure/k8s/frontend/manifest.yaml` に RBAC を追加**
+- [x] **1-1. `infrastructure/k8s/frontend/manifest.yaml` に RBAC を追加**
   - 追加リソース（manifest の先頭に追記）:
     ```yaml
     ServiceAccount: frontend-sa (namespace: technomart)
@@ -63,14 +69,14 @@
     ```
   - Deployment の `spec.template.spec` に `serviceAccountName: frontend-sa` を追加
 
-- [ ] **1-2. マニフェスト適用**
+- [x] **1-2. マニフェスト適用**
   ```bash
   vagrant ssh -c "kubectl apply -f /technomart/infrastructure/k8s/frontend/manifest.yaml"
   vagrant ssh -c "kubectl get serviceaccount frontend-sa -n technomart"
   vagrant ssh -c "kubectl get clusterrolebinding frontend-pod-reader"
   ```
 
-- [ ] **1-3. frontend Deployment を rollout restart して新しい SA を適用**
+- [x] **1-3. frontend Deployment を rollout restart して新しい SA を適用**
   ```bash
   vagrant ssh -c "kubectl rollout restart deployment/frontend -n technomart"
   vagrant ssh -c "kubectl rollout status deployment/frontend -n technomart"
@@ -88,15 +94,15 @@ vagrant ssh -c "kubectl exec -n technomart deploy/frontend -- sh -c '
 '"
 # → items: [...] の JSON が返ること
 ```
-- [ ] Pod 一覧の JSON が返ること（403 ではないこと）
-- [ ] `kube-system` namespace は取得できないこと（ClusterRole が technomart 限定のため）
-**期待結果**: technomart namespace の Pod 名が JSON で返ってくる
+- [x] Pod 一覧の JSON が返ること（403 ではないこと）
+- [x] `kube-system` namespace は取得できないこと（Role スコープで 403 確認）
+**結果**: ✅ 合格（当初 ClusterRole で全 ns に効いていたため Role + RoleBinding に修正）
 
 ---
 
 ## フェーズ2: lib/k8s.ts + lib/versions.ts + 型定義
 
-- [ ] **2-1. `lib/types.ts` に型を追加**
+- [x] **2-1. `lib/types.ts` に型を追加**
   ```typescript
   export interface PodInfo {
     name: string;
@@ -135,46 +141,47 @@ vagrant ssh -c "kubectl exec -n technomart deploy/frontend -- sh -c '
   }
   ```
 
-- [ ] **2-2. `lib/k8s.ts` を作成**
+- [x] **2-2. `lib/k8s.ts` を作成**
   - `k8sFetch(path, init?)` — SA トークン付き fetch
   - `listPods(namespace)` — Pod 一覧を `PodInfo[]` で返す
   - `watchPods(namespace)` — AsyncGenerator で `PodEvent` を yield
   - `toPodInfo(raw)` — k8s raw オブジェクトから `PodInfo` に変換
   - TLS: `NODE_EXTRA_CA_CERTS` 環境変数で CA 証明書を指定（Dockerfile に追加）
 
-- [ ] **2-3. `lib/versions.ts` を作成**
+- [x] **2-3. `lib/versions.ts` を作成**
   - `deployments.db` を child_process の `sqlite3` コマンドで読む（依存追加なし）
   - `getCurrentDeployments(): DeployRecord[]`
 
-- [ ] **2-4. `application/frontend/Dockerfile` に TLS 環境変数を追加**
+- [-] **2-4. `application/frontend/Dockerfile` に TLS 環境変数を追加**
   ```dockerfile
   ENV NODE_EXTRA_CA_CERTS=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
   ```
   - これで Node.js の fetch が k8s API の自己署名証明書を信頼する
 
 ### ✅ フェーズ2 完了基準
-- [ ] `lib/k8s.ts` の `listPods("technomart")` が Pod 一覧を返す（ローカルで動作確認）
-- [ ] `lib/versions.ts` が `deployments.db` から現在の状態を読める
+- [x] `lib/k8s.ts` の `listPods("technomart")` が Pod 一覧を返す（ローカルで動作確認）
+- [x] `lib/versions.ts` が `deployments.db` から現在の状態を読める
+**結果**: ✅ 実装完了（NODE_EXTRA_CA_CERTS は ConfigMap 経由で設定済みのため Dockerfile 変更不要）
 
 ---
 
 ## フェーズ3: API エンドポイント作成
 
-- [ ] **3-1. `app/api/healthz/route.ts` を作成**
+- [x] **3-1. `app/api/healthz/route.ts` を作成**
   - 認証不要
   - L2: k8s API server へ疎通確認（`/healthz` エンドポイント）
   - L3: Pod 数サマリー（Running / Pending / Failed / Unknown）
   - エラーでも 200 を返す（`k8s_api: "error"` として通知）
   - `Cache-Control: no-store`
 
-- [ ] **3-2. `app/api/status/pods/stream/route.ts` を作成**
+- [x] **3-2. `app/api/status/pods/stream/route.ts` を作成**
   - 認証不要
   - k8s watch API をパイプして SSE に変換
   - NDJSON の行バッファリング処理
   - `retry: 3000` ディレクティブで自動再接続設定
   - クライアント切断時（`req.signal.aborted`）に reader をキャンセル
 
-- [ ] **3-3. `middleware.ts` を更新**
+- [x] **3-3. `middleware.ts` を更新**
   ```typescript
   pathname === "/api/healthz" ||
   pathname.startsWith("/api/status/") ||
@@ -201,12 +208,13 @@ curl -s -o /dev/null -w "%{http_code}" \
 - [ ] SSE ストリームで ADDED イベントが流れること（Pod 数 = 11）
 - [ ] Pod を削除すると DELETED → ADDED イベントが流れること
 **期待結果**: 全エンドポイントが認証なしで動作する
+**実装完了**: フェーズ5（デプロイ）後に実機確認
 
 ---
 
 ## フェーズ4: フロントエンド UI
 
-- [ ] **4-1. `components/status/PodGrid.tsx` を作成（Client Component）**
+- [x] **4-1. `components/status/PodGrid.tsx` を作成（Client Component）**
   ```typescript
   "use client";
   ```
@@ -224,12 +232,12 @@ curl -s -o /dev/null -w "%{http_code}" \
   - 右上に接続状態インジケーター（● Connected / ○ Reconnecting...）
   - コンポーネントアンマウント時に `EventSource.close()` を呼ぶ
 
-- [ ] **4-2. `components/status/DeployVersions.tsx` を作成（Server Component）**
+- [x] **4-2. `components/status/DeployVersions.tsx` を作成（Server Component）**
   - `lib/versions.ts` から現在のデプロイ状態を取得
   - テーブル形式で表示: 環境 / サービス / バージョン / git hash / デプロイ日時
   - `deployments.db` が存在しない場合は「記録なし」を表示
 
-- [ ] **4-3. `app/status/page.tsx` を作成（Server Component）**
+- [x] **4-3. `app/status/page.tsx` を作成（Server Component）**
   - `export const dynamic = "force-dynamic"`
   - ページ上部: クラスター概要（初期 snapshot の Pod 数）
   - 中段: `<DeployVersions />` — デプロイバージョン一覧

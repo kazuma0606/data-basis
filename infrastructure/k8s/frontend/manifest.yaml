@@ -2,6 +2,64 @@
 # ローカル(k3s): NodePort 30300 でブラウザアクセス
 # 本番(EKS):    ConfigMap の BACKEND_URL と Secret を差し替えるだけで移行可能
 ---
+# ── ServiceAccount ─────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-sa
+  namespace: technomart
+---
+# ── Role: technomart namespace 内の Pod 読み取りのみ ───────────
+# namespace スコープの Role で technomart 以外には効かない
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: technomart-pod-reader
+  namespace: technomart
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+# ── RoleBinding ────────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: frontend-pod-reader
+  namespace: technomart
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: technomart-pod-reader
+subjects:
+  - kind: ServiceAccount
+    name: frontend-sa
+    namespace: technomart
+---
+# ── ClusterRole: Node 読み取りのみ（Node はクラスタースコープ）──
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: technomart-node-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+---
+# ── ClusterRoleBinding: Node 読み取り ──────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: frontend-node-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: technomart-node-reader
+subjects:
+  - kind: ServiceAccount
+    name: frontend-sa
+    namespace: technomart
+---
 # ── ConfigMap: 非機密設定 ──────────────────────────────────────
 apiVersion: v1
 kind: ConfigMap
@@ -15,6 +73,8 @@ data:
   NODE_ENV: "production"
   # HTTP アクセス時はクッキーの Secure フラグを無効化（本番 HTTPS では "true" に変更）
   SECURE_COOKIES: "false"
+  # k8s API の TLS 検証に使う CA 証明書（SA トークンと同じパスに自動マウントされる）
+  NODE_EXTRA_CA_CERTS: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 ---
 # ── Secret: 機密情報 ───────────────────────────────────────────
 # 本番では kubectl create secret generic frontend-secret \
@@ -46,6 +106,7 @@ spec:
       labels:
         app: frontend
     spec:
+      serviceAccountName: frontend-sa
       containers:
         - name: frontend
           image: 192.168.56.10:32500/technomart-frontend:latest
@@ -64,6 +125,10 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+          volumeMounts:
+            - name: versions-db
+              mountPath: /technomart/versions
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /auth/login
@@ -77,6 +142,11 @@ spec:
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 20
+      volumes:
+        - name: versions-db
+          hostPath:
+            path: /technomart/versions
+            type: Directory
 ---
 # ── Service: ClusterIP（内部アクセス用） + NodePort（外部アクセス用） ──
 apiVersion: v1
