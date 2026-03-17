@@ -1,211 +1,208 @@
-# v1.2 アップデート計画 — 監視・オブザーバビリティ
+# v1.2 アップデート計画
 
 作成日: 2026-03-16
-前提: v1.1（基盤データフロー・スコアリング）完了後に着手
+
+## 背景
+
+v1.0でローカルインフラの疎通確認が完了。
+全サービス（Kafka / Redis / PostgreSQL / ClickHouse / LocalStack / Ollama / Backend / Frontend）がk3s上で稼働し、
+ダッシュボードの基本的な表示が確認できた状態。
+
+v1.2は「基盤として実際に機能する状態」にすることを目標とする。
 
 ---
 
-## 方針
+## スコープ
 
-エンタープライズ向けの実案件でも使える構成を目指す。
-PoC段階だが設計は本番を想定し、ローカル→AWS移行時の差分を最小化する。
+### 1. ユーザー管理機能
 
-外部SaaSには依存しない（Datadog / New Relic等は使わない）。
-完全セルフホスト、OSSスタックで構成する。
+**背景**: 現状ユーザーはDBへの直接INSERTで管理しており、運用に耐えない。
 
----
+**実装内容**:
+- `POST /auth/users` — adminロールのみが叩けるユーザー作成API
+- `GET /auth/users` — ユーザー一覧取得（admin用）
+- `PATCH /auth/users/{id}` — ロール変更・有効/無効切替
+- パスワードのbcryptハッシュ化
+- 初期パスワード設定フロー（作成時に仮パスワードを返す）
+- `/ops/users` — 管理画面（ユーザー一覧・作成・ロール変更フォーム）
 
-## 監視スタック構成
-
-### コアスタック
-
-```
-Prometheus          — メトリクス収集・保存
-Grafana             — ダッシュボード・アラート可視化
-Alertmanager        — アラートルーティング（メール / Slack）
-Pushgateway         — バッチジョブ等のPushメトリクス受口
-```
-
-### Exporter群
-
-| Exporter | 監視対象 | 主なメトリクス |
-|---|---|---|
-| kafka-exporter | Kafkaトピック | consumer lag, offset, partition数 |
-| postgres_exporter | PostgreSQL | 接続数, スロークエリ, レプリケーション遅延 |
-| clickhouse_exporter | ClickHouse | クエリ時間, キャッシュヒット率, メモリ使用量 |
-| redis_exporter | Redis | hit率, eviction数, メモリ使用量, keyspace |
-| kube-state-metrics | k8s全体 | Pod死活, Deployment状態, PVC使用率 |
-| node_exporter | VMホスト | CPU, メモリ, ディスク使用率 |
+**ロール定義（現行）**:
+| ロール | アクセス先 |
+|---|---|
+| `engineer` | `/ops/*` のみ |
+| `marketer` | `/business/*`（全店舗） |
+| `store_manager` | `/business/*`（自分のstore_idのみ） |
+| `admin` | `/ops/*` + `/business/*` + ユーザー管理 |
 
 ---
 
-## 監視対象と閾値設計
+### 2. Kafkaパイプライン実装
 
-### Kafka
+**背景**: 現状はサンプルデータをDBに直接投入しているだけ。
+synthetic dataをKafka経由で流すパイプラインがなければ基盤として機能しない。
 
-| アラート | 条件 | 重要度 |
-|---|---|---|
-| consumer lag 増加 | lag > 10,000 かつ 5分継続 | WARNING |
-| consumer lag 急増 | lag > 50,000 | CRITICAL |
-| トピック書き込み停止 | 10分間メッセージなし | CRITICAL |
-| パーティションリーダーなし | under-replicated partitions > 0 | CRITICAL |
-
-### PostgreSQL
-
-| アラート | 条件 | 重要度 |
-|---|---|---|
-| 接続数逼迫 | active connections > 80% of max | WARNING |
-| スロークエリ | 実行時間 > 5s のクエリ存在 | WARNING |
-| ディスク使用率 | PVC使用率 > 80% | WARNING |
-| 死活 | pg_up == 0 | CRITICAL |
-
-### ClickHouse
-
-| アラート | 条件 | 重要度 |
-|---|---|---|
-| クエリ遅延 | p99 > 10s | WARNING |
-| メモリ使用量 | > 80% of limit | WARNING |
-| 死活 | up == 0 | CRITICAL |
-
-### バッチジョブ（Pushgateway経由）
-
-| アラート | 条件 | 重要度 |
-|---|---|---|
-| スコアリング失敗 | job_last_success_timestamp > 25h (日次) | CRITICAL |
-| 名寄せバッチ失敗 | job_last_success_timestamp > 25h (日次) | CRITICAL |
-| Embeddingバッチ失敗 | job_last_success_timestamp > 25h (日次) | WARNING |
-
-### インフラ
-
-| アラート | 条件 | 重要度 |
-|---|---|---|
-| VMディスク残量 | 使用率 > 85% | WARNING |
-| VMディスク残量 | 使用率 > 95% | CRITICAL |
-| Pod OOMKill | OOMKilled > 0 | CRITICAL |
-| Pod 再起動ループ | restartCount > 5 / 1h | WARNING |
+**実装内容**:
+- Kafka Connectの設定（ソースコネクタ）
+- synthetic dataをKafkaトピックにプロデュース
+  - `ec.events` — EC閲覧・購買・カートイベント
+  - `pos.transactions` — POSレジデータ
+  - `app.behaviors` — アプリ行動ログ
+  - `inventory.updates` — 在庫変動
+- Kafkaコンシューマー実装
+  - → S3（LocalStack）への生データ書き出し（raw/）
+  - → PostgreSQLへの取り込み（ステージングテーブル）
 
 ---
 
-## Grafanaダッシュボード設計
+### 3. 名寄せパイプライン
 
-### 既存のOpsダッシュボード（Next.js）との役割分担
+**背景**: EC / POS / アプリで同一人物が別IDで存在する。
+`unified_customers`テーブルが実データで埋まっていないと全体が機能しない。
+synthetic dataには意図的に以下の汚れを入れてある（verification/で検証済み）:
+- 500人中254人が複数システムに別IDで存在
+- 電話番号フォーマット5種類混在
+- 生年月日が和暦（S55, H15等）と西暦混在
+- 都道府県が正式名称・略称・数字コード混在
 
-| ダッシュボード | 対象ユーザー | 内容 |
+**実装内容**:
+- クレンジング処理
+  - 電話番号の正規化（E.164 or ハイフンあり統一）
+  - 生年月日の西暦統一（和暦→西暦変換）
+  - 都道府県コードの統一
+- 名寄せロジック
+  - マッチングキー: 電話番号 / メールアドレス / 氏名+生年月日
+  - `customer_source_map`テーブルへの対応関係記録
+  - `unified_customers`テーブルへの統合レコード生成
+- 実行: バッチ（日次）、初回は全件処理
+
+---
+
+### 4. スコアリングバッチ本体
+
+**背景**: ClickHouseに入っているのはサンプルデータのみ。
+実際のスコア計算ロジックを実装し、パイプラインと接続する。
+
+**スコア種別と更新頻度**:
+| スコア | 更新頻度 | 主なインプット |
 |---|---|---|
-| Grafana | エンジニア（インフラ監視） | メトリクス時系列・アラート管理 |
-| Ops (/ops/*) | エンジニア（業務確認） | パイプライン実行状況・スキーマ参照 |
-| Business (/business/*) | マーケ・店長 | KPI・顧客分析 |
+| カテゴリ親和性 | 日次 | EC購買履歴・POS購買履歴 |
+| チャーンリスク | 週次 | 最終購買日・来店頻度・休眠期間 |
+| 購買タイミング | 週次 | 購買間隔の分布 |
+| 来店予測 | 週次 | 来店履歴・曜日/時間帯パターン |
 
-→ Grafanaは純粋にインフラ・ミドルウェア監視に特化させる。業務KPIはNext.jsで見せる。
-
-### Grafanaダッシュボード一覧
-
-```
-1. クラスター概要
-   └── Pod死活 / CPU・メモリ / ディスク使用率（全サービス）
-
-2. Kafkaパイプライン
-   └── consumer lag推移 / メッセージスループット / トピック別offset
-
-3. データベース
-   ├── PostgreSQL: 接続数・スロークエリ・PVC使用率
-   └── ClickHouse: クエリ時間p50/p95/p99・メモリ
-
-4. バッチジョブ実行状況
-   └── 各バッチの最終成功時刻・実行時間推移・失敗率
-
-5. Redis
-   └── hit率・メモリ使用率・eviction数・keyspace
-
-6. SLI/SLO（エンタープライズ向け）
-   └── API応答時間p99・エラー率・可用性（直近30日）
-```
+**実装内容**:
+- スコアリングサービス（Pythonバッチ）
+- Kubernetes CronJobとして定義
+- 結果をPostgreSQLの`customer_scores`へ書き込み
+- RedisへのTTL 24hキャッシュ
+- ClickHouseへの集計テーブル更新
 
 ---
 
-## SLI / SLO 設計（エンタープライズ向け）
+## ローカルだから今やっておくべきこと（本番移行前に確定）
 
-実案件で求められる水準を想定。
+### Terraform整備
+- 現在未使用
+- LocalStack providerで構成をコード管理
+- 本番AWS移行時に差分最小化
 
-| SLO | 目標値 | 計測方法 |
-|---|---|---|
-| Backend API 可用性 | 99.5% / 月 | Prometheusの`up`メトリクス |
-| Backend API p99応答時間 | < 2s | FastAPI → Prometheus middleware |
-| スコアリングバッチ 成功率 | 99% / 月 | Pushgateway + カスタムメトリクス |
-| Kafka consumer lag | < 10,000 件 (平常時) | kafka-exporter |
-| ダッシュボード初回表示 | < 3s (p95) | Next.js → Web Vitals |
+### pgvector Embedding生成
+- Ollama `nomic-embed-text` で商品・顧客のEmbedding生成バッチ
+- `product_embeddings`テーブルへの格納
+- 類似商品推薦・類似顧客検索の基盤
 
-エラーバジェットを設定し、バジェット消化率をGrafanaで可視化する。
+### ClickHouse S3日次ロードETL
+- S3（aggregated/）→ ClickHouseのETLジョブ設計と検証
+- Kubernetes CronJobとして定義
 
----
+### シードデータ投入の自動化
+- `deploy.sh`実行後に完全な状態になるよう初期データ投入スクリプトを整備
+- 現在: 手動でClickHouseにCURLでデータ投入が必要な状態
 
-## 分散トレーシング（将来オプション）
-
-v1.2の必須スコープではないが、エンタープライズ向けに検討すべき項目。
-
-```
-OpenTelemetry Collector
-├── FastAPI → OTLP traces
-├── Next.js → OTLP traces (instrumentation)
-└── → Jaeger（ローカル）/ X-Ray（AWS移行後）
-```
-
-FastAPIはOpenTelemetryの自動計装（`opentelemetry-instrument`）で
-コード変更なしにトレースが取れる。AWS移行後はX-Rayに切り替え。
+### 障害シナリオテスト（ローカルだから試せる）
+- Podを意図的に落としてデータ欠損が起きないか確認
+- PVCのデータ永続化確認（ClickHouse / PostgreSQL / Ollama）
+- Kafka offset管理の確認（コンシューマーが途中から再開できるか）
 
 ---
 
-## k8s リソース構成
+### 5. Nginx Ingress Controller導入
+
+**背景**:
+現状はフロントエンド(:30300)・バックエンド(:30800)をそれぞれNodePortで直接外部公開している。
+これには以下の問題がある。
+
+- バックエンドAPIが外部から直接叩ける（JWTはあるが、エンドポイントが露出している）
+- フロントとバックで別ポートになっており、本番構成と乖離している
+- HTTPのため`SECURE_COOKIES: "false"`というハックが必要になっている
+- ヘルスチェック・ルーティングがk8sのIngressとして管理されていない
+
+**CORSとの関係**:
+CORSはブラウザが自主的に守るルールであり、サーバー側のアクセス制御ではない。
+`curl`やサーバー間通信はCORSを無視できる。
+現状のバックエンドアクセス制御はJWTが担っており、CORSはあくまで補助的な役割。
+Nginx Ingressを入れることで「バックエンドをCluster-IP化し、外部から直接到達できなくする」
+ネットワークレベルの制御が加わる。
+
+**実装内容**:
+- Nginx Ingress Controllerのk8sマニフェスト追加
+- ルーティング設定
+  - `/` → frontend (Next.js)
+  - `/api/` → backend (FastAPI) ※バックエンドはCluster-IPに変更（NodePort廃止）
+- SSL証明書の設定（自己署名でも可）→ `SECURE_COOKIES: "false"` ハックの解消
+- バックエンドのServiceタイプを `NodePort` → `ClusterIP` に変更
+
+**AWS移行時の対応**:
+- AWS Load Balancer Controller（ALB）がNginx Ingressの前段に入る
+- または ALB が直接k8s Serviceにルーティングする構成に切り替え
+- ローカルでNginx Ingressを使っておくことで、ルーティングルールがそのまま流用できる
 
 ```
-namespace: monitoring
+【ローカル（v1.1以降）】
+ブラウザ → :80/:443 → Nginx Ingress → / → frontend
+                                      → /api/ → backend (ClusterIP)
 
-Deployments:
-  prometheus        200m CPU / 1Gi RAM（保存期間 15日）
-  grafana           100m CPU / 256Mi RAM
-  alertmanager      50m CPU / 128Mi RAM
-  pushgateway       50m CPU / 128Mi RAM
-
-DaemonSet:
-  node_exporter     （全ノード）
-
-Deployments（各exporter）:
-  kafka-exporter
-  postgres-exporter
-  clickhouse-exporter
-  redis-exporter
-  kube-state-metrics
-
-PersistentVolumeClaim:
-  prometheus-data   20Gi（メトリクス保存）
-  grafana-data      5Gi（ダッシュボード設定）
+【AWS移行後】
+ブラウザ → ALB → Nginx Ingress → / → frontend
+                               → /api/ → backend (ClusterIP)
 ```
 
 ---
 
-## AWS移行時の対応
+## 優先順位
 
-| ローカル | AWS | 移行コスト |
-|---|---|---|
-| Prometheus | Amazon Managed Prometheus (AMP) | 設定ファイルほぼ同じ |
-| Grafana | Amazon Managed Grafana (AMG) | ダッシュボードJSONをインポート |
-| Alertmanager | AMG Alerting | 書き換え必要 |
-| Jaeger | AWS X-Ray | OTel CollectorのExporter変更のみ |
+```
+Phase 1（基盤完成）
+├── 3. 名寄せパイプライン   ← unified_customers を実データで埋める
+└── 2. Kafkaパイプライン    ← データフローを実際に流す
 
-→ Prometheus/Grafanaをセルフホストで設計しておけば、
-　 AMPへの移行はリモートライト設定の追加だけで対応できる。
+Phase 2（機能追加）
+├── 4. スコアリングバッチ本体
+└── 1. ユーザー管理機能
+
+Phase 3（本番移行準備・インフラ整備）
+├── 5. Nginx Ingress Controller導入  ← バックエンド非公開化・SSL化
+├── Terraform整備
+├── pgvector Embedding生成
+└── ClickHouse S3日次ロードETL
+```
+
+※ Phase 3のNginx Ingressはv1.3（監視）より先に完了させる。
+　 PrometheusやGrafanaもIngress経由でアクセスする構成になるため。
 
 ---
 
-## 実装順序
+## 現在の技術スタック（v1.0時点）
 
-```
-Step 1: namespace: monitoring 作成 + Prometheus + node_exporter
-Step 2: kube-state-metrics（Pod死活の基本監視）
-Step 3: 各サービスexporter（Kafka → PostgreSQL → ClickHouse → Redis）
-Step 4: Grafanaダッシュボード作成
-Step 5: Alertmanager設定（Slack通知）
-Step 6: Pushgateway + バッチジョブメトリクス送信実装
-Step 7: SLO/エラーバジェットダッシュボード
-Step 8: OpenTelemetry（オプション）
-```
+| レイヤー | 技術 | バージョン/備考 |
+|---|---|---|
+| VM | VirtualBox + Ubuntu 24.04 | 10コア / 48GB RAM |
+| コンテナ基盤 | k3s | 192.168.56.10 |
+| ストリーミング | Kafka (KRaft) | :32092 |
+| アプリDB | PostgreSQL + pgvector | :32432 |
+| 分析DB | ClickHouse | HTTP :30823 / native :30900 |
+| キャッシュ | Redis | :32379 |
+| オブジェクトストレージ | LocalStack S3 | :31566 |
+| LLM | Ollama (qwen2.5:3b, nomic-embed-text) | :31434 |
+| バックエンド | FastAPI | :30800 |
+| フロントエンド | Next.js 15 + ShadCN | :30300 |

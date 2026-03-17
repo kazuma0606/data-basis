@@ -1,6 +1,9 @@
 # 接続情報（検証用）
 CONNECTIONS.md
 
+# バージョン管理DB（スキーマはgit管理、データはローカル保持）
+versions/deployments.db
+
 verification/*.db
 verification/uv.lock
 verification/src/__pycache__/
