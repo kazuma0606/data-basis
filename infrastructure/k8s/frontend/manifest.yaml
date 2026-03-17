@@ -48,8 +48,8 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: technomart-frontend:latest
-          imagePullPolicy: Never  # k3s ローカルインポート済みイメージを使用
+          image: 192.168.56.10:32500/technomart-frontend:latest
+          imagePullPolicy: Always  # ローカルレジストリから毎回pull
           ports:
             - containerPort: 3000
           envFrom:
