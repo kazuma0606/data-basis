@@ -263,7 +263,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ## フェーズ5: デプロイ + 最終確認
 
-- [ ] **5-1. frontend イメージをビルドして push**
+- [x] **5-1. frontend イメージをビルドして push**
   ```bash
   vagrant ssh
   REGISTRY="192.168.56.10:32500"
@@ -285,7 +285,7 @@ curl -s -o /dev/null -w "%{http_code}" \
   kubectl rollout status deployment/frontend -n technomart
   ```
 
-- [ ] **5-2. デプロイ記録**
+- [x] **5-2. デプロイ記録**
   ```bash
   bash /technomart/versions/record.sh prod frontend "$SEMVER" "$GIT_HASH" \
     "${REGISTRY}/technomart-frontend:${TAG}" "v1.1.1 pod monitoring"
@@ -293,14 +293,15 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ### 🧪 テスト5: エンドツーエンド確認
 ```
-[ ] http://192.168.56.10:30300/api/healthz が認証なしで 200 を返す
-[ ] http://192.168.56.10:30300/status がログインなしで開ける
-[ ] デプロイバージョンに prod/frontend の新しい記録が表示される
-[ ] Pod グリッドがリアルタイムで更新される
-[ ] vagrant reload 後も /status が正常に動作する
-[ ] /ops/* は引き続き認証が必要なこと（変更していないことの確認）
+[x] http://192.168.56.10:30300/api/healthz が認証なしで 200 を返す
+[x] http://192.168.56.10:30300/status がログインなしで開ける（HTTP 200）
+[x] デプロイバージョンに prod/frontend の新しい記録が表示される
+[x] Pod グリッドがリアルタイムで更新される（SSE ストリーム確認済み）
+[ ] vagrant reload 後も /status が正常に動作する（未確認）
+[x] /ops/* は引き続き認証が必要なこと（/ops/overview → 307 リダイレクト確認）
 ```
 **期待結果**: v1.1 の全機能 + 認証不要の Pod 監視ページが安定稼働
+**実機確認日**: 2026-03-17 — /api/healthz: {nextjs:ok, k8s_api:ok, pods:{running:10,pending:1,failed:0}}
 
 ---
 
