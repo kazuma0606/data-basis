@@ -101,6 +101,44 @@ export interface NLQueryResponse {
   answer: string;
 }
 
+// ── Status (認証不要 / Pod 監視) ──────────────────────────────────────────
+
+export interface PodInfo {
+  name: string;
+  namespace: string;
+  status: string;    // "Running" | "Pending" | "CrashLoopBackOff" etc.
+  ready: string;     // "1/1"
+  restarts: number;
+  age: string;       // "2h" / "3d"
+  image: string;     // イメージタグ（例: technomart-backend:v1.1-04b359d）
+  message?: string;  // エラー時の詳細
+}
+
+export interface PodEvent {
+  type: "ADDED" | "MODIFIED" | "DELETED";
+  pod: PodInfo;
+}
+
+export interface ClusterHealth {
+  nextjs: "ok";
+  k8s_api: "ok" | "error";
+  k8s_error?: string;
+  pods: {
+    running: number;
+    pending: number;
+    failed: number;
+    unknown: number;
+  };
+}
+
+export interface DeployRecord {
+  environment: string;
+  service: string;
+  semver: string;
+  git_hash: string;
+  deployed_at: string;
+}
+
 // ── Ops ───────────────────────────────────────────────────────────────────
 
 export interface ServiceHealth {
