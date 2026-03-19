@@ -460,94 +460,66 @@ vagrant ssh -c "
 
 ### 5-1. Nginx Ingress Controller インストール
 
-- [ ] **5-1-1. Nginx Ingress Controller マニフェスト適用**
-  ```bash
-  vagrant ssh -c "
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/baremetal/deploy.yaml
-    kubectl wait --namespace ingress-nginx \
-      --for=condition=ready pod \
-      --selector=app.kubernetes.io/component=controller \
-      --timeout=120s
-  "
-  ```
-  > ※ オフライン環境の場合はマニフェストを事前ダウンロードしてVM内に配置する
+- [x] **5-1-1. Nginx Ingress Controller マニフェスト適用**
+  - ingress-nginx v1.10.0 (baremetal) を適用
 
-- [ ] **5-1-2. Ingress Controller の NodePort を確認**
-  ```bash
-  vagrant ssh -c "kubectl get svc -n ingress-nginx"
-  # HTTP: 80 → NodePort, HTTPS: 443 → NodePort を確認
-  ```
+- [x] **5-1-2. Ingress Controller の NodePort を確認**
+  - HTTP: **31408**, HTTPS: **32239**
 
 ### 5-2. Ingress リソース定義
 
-- [ ] **5-2-1. Ingress マニフェスト作成**
-  ```yaml
-  # infrastructure/k8s/ingress/ingress.yaml
-  # / → frontend (ClusterIP)
-  # /api/ → backend (ClusterIP)
-  ```
+- [x] **5-2-1. Ingress マニフェスト作成**
+  - `infrastructure/k8s/ingress/ingress.yaml`
+  - ルーティング: すべてのリクエスト → frontend（Next.js の `/api/*` が内部でバックエンドへプロキシ）
+  - アノテーション: `ssl-redirect: true` + `force-ssl-redirect: true`
 
-- [ ] **5-2-2. バックエンド Service を NodePort → ClusterIP に変更**
-  ```yaml
-  # infrastructure/k8s/backend/service.yaml
-  # type: ClusterIP  （NodePort から変更）
-  ```
+- [x] **5-2-2. バックエンド Service を NodePort → ClusterIP に変更**
+  - `infrastructure/k8s/backend/manifest.yaml` の type を ClusterIP に変更
 
-- [ ] **5-2-3. フロントエンド Service も ClusterIP に変更**
-  > Ingress 経由でアクセスするため NodePort 不要になる
+- [x] **5-2-3. フロントエンド Service も ClusterIP に変更**
+  - `infrastructure/k8s/frontend/manifest.yaml` の type を ClusterIP に変更
 
 ### 5-3. SSL 証明書設定（自己署名）
 
-- [ ] **5-3-1. 自己署名証明書の生成**
-  ```bash
-  vagrant ssh -c "
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-      -keyout /technomart/infrastructure/k8s/ingress/tls.key \
-      -out /technomart/infrastructure/k8s/ingress/tls.crt \
-      -subj '/CN=192.168.56.10/O=technomart'
-    kubectl create secret tls technomart-tls \
-      --key /technomart/infrastructure/k8s/ingress/tls.key \
-      --cert /technomart/infrastructure/k8s/ingress/tls.crt \
-      -n data-basis
-  "
-  ```
+- [x] **5-3-1. 自己署名証明書の生成**
+  - 証明書: `/technomart/infrastructure/k8s/ingress/tls.{key,crt}` (CN=192.168.56.10)
+  - Secret: `kubectl create secret tls technomart-tls -n technomart`
 
-- [ ] **5-3-2. Ingress に TLS 設定を追加**
+- [x] **5-3-2. Ingress に TLS 設定を追加**
+  - `spec.tls[0].secretName: technomart-tls`（hosts 指定なし → 全リクエストに適用）
 
-- [ ] **5-3-3. `SECURE_COOKIES: "false"` ハックを削除**
-  - バックエンドの環境変数から `SECURE_COOKIES` を削除または `true` に変更
+- [x] **5-3-3. `SECURE_COOKIES: "false"` → `"true"` に変更**
+  - frontend ConfigMap を更新、`kubectl rollout restart deployment/frontend` 実施
 
 ### 5-4. フロントエンドの API URL 更新
 
-- [ ] **5-4-1. `NEXT_PUBLIC_API_URL` を Ingress 経由のパスに変更**
-  - 変更前: `http://192.168.56.10:30800`
-  - 変更後: `https://192.168.56.10/api` または `http://192.168.56.10/api`
-
-- [ ] **5-4-2. deploy.sh で frontend を再デプロイ**
+- [-] **5-4-1. `NEXT_PUBLIC_API_URL` 変更は不要**
+  - `BACKEND_URL` は k8s 内部 DNS（ClusterIP）を使用しており変更不要
+  - Next.js の `/api/*` ルートがバックエンドへプロキシする構成のため外部 URL 変更は不要
 
 ### 🧪 テスト（フェーズ5）
-```bash
-# Ingress 経由でアクセスできること
-curl -k https://192.168.56.10/ -I
-curl -k https://192.168.56.10/api/health -I
-
-# バックエンドへの直接アクセスが拒否されること（ClusterIP化後）
-curl http://192.168.56.10:30800/health  # → Connection refused
-```
-- [ ] `https://192.168.56.10/` でフロントエンドが表示されること
-- [ ] `https://192.168.56.10/api/health` でバックエンドが応答すること
-- [ ] `:30800` への直接アクセスが拒否されること
-- [ ] ブラウザで証明書警告が出るが HTTPS でアクセスできること
+- [x] HTTP:31408 → 308 Permanent Redirect（HTTPS へリダイレクト）
+- [x] HTTPS:32239 → 307（→ /auth/login）。ログイン後 200 でページ表示
+- [x] `:30800` への直接アクセスが Connection refused
+- [x] `:30300` への直接アクセスが Connection refused
+- [x] HTTPS ログイン成功: admin/admin123 → Cookie に Secure フラグ付き JWT 取得
+- [x] /ops/users へのアクセス確認（200）
 
 ### ✅ フェーズ5 完了基準
-- [ ] Ingress 経由でフロント・バックエンドにアクセスできること
-- [ ] バックエンドが ClusterIP になり直接アクセス不可になること
-- [ ] HTTPS でアクセスできること（自己署名）
+- [x] Ingress 経由でフロントエンドにアクセスできること
+- [x] バックエンドが ClusterIP になり直接アクセス不可になること
+- [x] HTTPS でアクセスできること（自己署名）
 
 ### 作業メモ（フェーズ5）
-- 実施日:
-- Ingress Controller の NodePort:
-- HTTPS アクセス確認:
+- 実施日: 2026-03-19
+- Ingress Controller の NodePort: HTTP=31408, HTTPS=32239
+- HTTPS アクセス: `https://192.168.56.10:32239/`（ブラウザでは証明書警告が出る）
+- ⚠️ HTTP→HTTPS リダイレクトの Location ヘッダーは `https://192.168.56.10`（port なし）
+  - NodePort 環境の既知の制限。ユーザーは `https://192.168.56.10:32239/` を直接ブックマーク
+- **実装詳細**:
+  - `infrastructure/k8s/ingress/ingress.yaml`: Ingress リソース新規作成
+  - `infrastructure/k8s/backend/manifest.yaml`: Service を ClusterIP に変更
+  - `infrastructure/k8s/frontend/manifest.yaml`: Service を ClusterIP に変更、SECURE_COOKIES=true
 
 ---
 
