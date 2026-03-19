@@ -1,0 +1,36 @@
+# PostgreSQL staging → ClickHouse 日次 ETL CronJob
+# 毎日 04:00 JST（= 19:00 UTC 前日）に実行
+# 前日分のデータを転送する
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etl-pg-to-clickhouse
+  namespace: technomart
+spec:
+  schedule: "0 19 * * *"   # 19:00 UTC = 04:00 JST
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: etl
+              image: 192.168.56.10:32500/technomart-backend:latest
+              imagePullPolicy: Always
+              command: ["python3", "-m", "app.pipelines.etl.pg_to_clickhouse"]
+              envFrom:
+                - configMapRef:
+                    name: backend-config
+                - secretRef:
+                    name: backend-secret
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "300m"
+                  memory: "256Mi"

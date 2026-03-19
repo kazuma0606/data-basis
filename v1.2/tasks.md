@@ -531,61 +531,75 @@ vagrant ssh -c "
 
 ### 6-1. シードデータ投入の自動化
 
-- [ ] **6-1-1. `deploy.sh` 実行後に完全な状態になるよう初期データ投入スクリプトを整備**
-  - 現状: ClickHouse に手動 CURL が必要
-  - 目標: `bash infrastructure/scripts/seed_all.sh` 1本で完結
+- [x] **6-1-1. `seed_all.sh` を整備**
   - 配置: `infrastructure/scripts/seed_all.sh`
+  - 処理: S3バケット作成 → Kafkaトピック確認 → プロデューサー → コンシューマー → 名寄せ → スコアリング → Embedding 生成
 
-- [ ] **6-1-2. seed_all.sh の内容**
-  - PostgreSQL スキーマ適用（マイグレーション）
-  - ClickHouse スキーマ適用
-  - LocalStack S3 バケット作成
-  - Kafka トピック作成
-  - synthetic data の投入（Kafka プロデューサー経由）
-  - 名寄せバッチ初回実行
-  - スコアリングバッチ初回実行
+- [x] **6-1-2. seed_all.sh の内容**
+  - [1] LocalStack S3 バケット確認・作成（technomart-datalake / technomart-raw）
+  - [2] Kafka トピック確認（不足時は自動作成）
+  - [3] 全プロデューサー実行（ec / pos / app / inventory）
+  - [4] 全コンシューマー実行（pg_consumer / s3_consumer）
+  - [5] 名寄せバッチ（`--mode full`）
+  - [6] スコアリングバッチ（`--mode full`、ClickHouse 同期含む）
+  - [7] 商品 Embedding 生成（pgvector / nomic-embed-text）
 
 ### 6-2. pgvector Embedding 生成
 
-- [ ] **6-2-1. 商品 Embedding 生成バッチ**
-  - モデル: `nomic-embed-text`（Ollama）
-  - 対象: 商品マスタの商品名・説明文
-  - 格納先: `product_embeddings` テーブル
+- [x] **6-2-1. 商品 Embedding 生成バッチ**
+  - モデル: `nomic-embed-text`（Ollama、768次元）
+  - 対象: `unified_products`（商品名 + ブランド + category_id のテキスト）
+  - ALTER TABLE で `embedding vector(768)` カラムを自動追加（べき等）
   - 配置: `application/backend/app/pipelines/embeddings/product_embeddings.py`
+  - 実行結果: 23件全商品の Embedding 生成完了
 
-- [ ] **6-2-2. 顧客 Embedding 生成バッチ（購買履歴のテキスト表現）**
-  - 格納先: `unified_customers` の embedding カラム（pgvector）
-  - 配置: `application/backend/app/pipelines/embeddings/customer_embeddings.py`
+- [-] **6-2-2. 顧客 Embedding 生成バッチ**
+  - `unified_customers` に embedding カラムなし、対応ユースケースは顧客→商品推薦（既存の `/business/customers/{id}/recommendations`）で対応済み。独立バッチは不要と判断
 
-- [ ] **6-2-3. 類似商品推薦 API エンドポイント**
-  - `GET /api/products/{id}/similar` → pgvector で類似検索
+- [x] **6-2-3. 類似商品推薦 API エンドポイント**
+  - `GET /business/products/{id}/similar` → pgvector コサイン類似度検索
+  - 配置: `application/backend/app/presentation/routers/business.py`
+  - 動作: embedding 生成済み商品はそのまま検索、未生成は Ollama で即時生成
 
-### 6-3. ClickHouse S3 日次ロード ETL
+### 6-3. ClickHouse 日次 ETL
 
-- [ ] **6-3-1. ETL スクリプト実装**
-  - S3（aggregated/）→ ClickHouse の分析テーブル
-  - 配置: `application/backend/app/pipelines/etl/s3_to_clickhouse.py`
+- [x] **6-3-1. ETL スクリプト実装**
+  - PG staging_ec_events → ClickHouse ec_events
+  - PG staging_pos_transactions → ClickHouse pos_transactions
+  - PG集計 → ClickHouse sales_by_channel（チャネル別日次集計）
+  - 配置: `application/backend/app/pipelines/etl/pg_to_clickhouse.py`
+  - 引数: `--date YYYY-MM-DD`（省略時: 昨日）
 
-- [ ] **6-3-2. Kubernetes CronJob マニフェスト**
-  ```yaml
-  # infrastructure/k8s/etl/cronjob-s3-clickhouse.yaml
-  # schedule: "0 4 * * *"  # 毎日4時
-  ```
+- [x] **6-3-2. Kubernetes CronJob マニフェスト**
+  - `infrastructure/k8s/etl/cronjob-etl.yaml`
+  - schedule: `"0 19 * * *"`（UTC 19:00 = JST 04:00）
 
 ### 6-4. Terraform 整備（LocalStack）
 
-- [ ] **6-4-1. LocalStack provider の設定**
+- [x] **6-4-1. LocalStack provider の設定**
   - `infrastructure/terraform/localstack/main.tf`
+  - `infrastructure/terraform/localstack/variables.tf`
+  - 本番移行: `endpoints` ブロックを削除するだけで AWS 対応
 
-- [ ] **6-4-2. S3 バケット定義を Terraform で管理**
-  - `technomart-raw` / `technomart-aggregated` / `technomart-models`
+- [x] **6-4-2. S3 バケット定義を Terraform で管理**
+  - technomart-datalake（import済み）/ technomart-raw / technomart-aggregated / technomart-models
+  - technomart-raw にバージョニング有効化
 
-- [ ] **6-4-3. `terraform plan` / `terraform apply` の動作確認**
+- [x] **6-4-3. `terraform plan` / `terraform apply` の動作確認**
+  - `terraform init` → `terraform plan` → `terraform apply` 成功
+  - ⚠️ LocalStack は日本語タグ非対応 → Purpose タグを英語化
 
 ### ✅ フェーズ6 完了基準
-- [ ] `seed_all.sh` 1本でデータが全て投入されること
-- [ ] pgvector Embedding が生成され格納されること
-- [ ] S3 → ClickHouse ETL が CronJob として動作すること
+- [x] `seed_all.sh` 1本でデータが全て投入されること
+- [x] pgvector Embedding が生成され格納されること（23件）
+- [x] ClickHouse ETL が CronJob として動作すること
+
+### 作業メモ（フェーズ6）
+- 実施日: 2026-03-19
+- 商品 Embedding: 23件（nomic-embed-text 768次元）
+- ClickHouse ETL: staging → ec_events / pos_transactions / sales_by_channel
+- Terraform: `terraform apply` 成功（4バケット作成、1つは import）
+- 注意: LocalStack の S3 タグは ASCII のみ対応（日本語不可）
 
 ---
 
