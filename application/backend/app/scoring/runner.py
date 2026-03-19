@@ -409,72 +409,179 @@ async def cache_scores_to_redis(
 
 # ── ClickHouse 集計同期 ────────────────────────────────────────
 
+def _age_group(age: float | None) -> str:
+    """年齢 → 年代グループ文字列"""
+    if age is None:
+        return "不明"
+    a = int(age)
+    if a < 25:
+        return "20代以下"
+    if a < 35:
+        return "25-34"
+    if a < 45:
+        return "35-44"
+    if a < 55:
+        return "45-54"
+    return "55以上"
+
 
 async def sync_to_clickhouse(session: AsyncSession) -> int:
     """
-    customer_scores の集計サマリーを ClickHouse に書き込む。
-    ClickHouseへの接続は clickhouse_driver を使用。
+    customer_scores の集計データを ClickHouse の3テーブルに書き込む。
+      - customer_scores_daily  : 顧客別スコア（カテゴリ親和性を Map で格納）
+      - category_affinity_summary : カテゴリ×年代別集計
+      - churn_summary_weekly   : チャーンリスク分布
+    clickhouse_connect（HTTP クライアント）を使用。
     """
     try:
-        from clickhouse_driver import Client
+        import clickhouse_connect
     except ImportError:
-        log.warning("clickhouse_driver が見つかりません。ClickHouseへの同期をスキップします。")
+        log.warning("clickhouse_connect が見つかりません。ClickHouseへの同期をスキップします。")
         return 0
 
-    # PostgreSQL から集計
-    rows = await session.execute(
+    # ── PostgreSQL から生データ取得 ────────────────────────────
+
+    # 顧客別 × カテゴリ別スコア（customer_scores）
+    score_rows = await session.execute(
         text("""
             SELECT
-                category_id,
-                COUNT(DISTINCT unified_id) AS customer_count,
-                AVG(affinity_score) AS avg_affinity,
-                AVG(churn_risk_score) AS avg_churn_risk,
-                AVG(timing_score) AS avg_timing,
-                AVG(visit_predict_score) AS avg_visit,
-                MAX(batch_run_date) AS batch_date
-            FROM customer_scores
-            GROUP BY category_id
+                cs.unified_id,
+                cs.batch_run_date,
+                cs.category_id,
+                cs.affinity_score,
+                cs.churn_risk_score,
+                cs.timing_score,
+                cs.visit_predict_score
+            FROM customer_scores cs
+            ORDER BY cs.unified_id, cs.category_id
         """)
     )
-    summary = list(rows)
-    if not summary:
+
+    # カテゴリ × 年代別集計（unified_customers と JOIN）
+    cat_aff_rows = await session.execute(
+        text("""
+            SELECT
+                cs.batch_run_date                                   AS week,
+                cs.category_id,
+                DATE_PART('year', AGE(uc.birth_date))               AS age,
+                AVG(cs.affinity_score)                              AS avg_score,
+                COUNT(DISTINCT cs.unified_id)                       AS customer_count
+            FROM customer_scores cs
+            LEFT JOIN unified_customers uc ON cs.unified_id = uc.unified_id
+            GROUP BY cs.batch_run_date, cs.category_id,
+                     DATE_PART('year', AGE(uc.birth_date))
+        """)
+    )
+
+    # チャーンリスク分布（顧客ごとに重複排除してからバケット集計）
+    churn_rows = await session.execute(
+        text("""
+            SELECT
+                sub.batch_run_date AS week,
+                CASE
+                    WHEN sub.churn_risk_score >= 0.7 THEN 'high'
+                    WHEN sub.churn_risk_score >= 0.3 THEN 'medium'
+                    ELSE 'low'
+                END AS label,
+                COUNT(*) AS customer_count
+            FROM (
+                SELECT DISTINCT ON (unified_id, batch_run_date)
+                    unified_id, batch_run_date, churn_risk_score
+                FROM customer_scores
+                ORDER BY unified_id, batch_run_date
+            ) sub
+            GROUP BY sub.batch_run_date,
+                CASE
+                    WHEN sub.churn_risk_score >= 0.7 THEN 'high'
+                    WHEN sub.churn_risk_score >= 0.3 THEN 'medium'
+                    ELSE 'low'
+                END
+        """)
+    )
+
+    all_scores = list(score_rows)
+    all_cat_aff = list(cat_aff_rows)
+    all_churn = list(churn_rows)
+
+    if not all_scores:
+        log.info("customer_scores が空のため ClickHouse 同期をスキップします。")
         return 0
 
-    client = Client(
+    # ── ClickHouse クライアント接続 ────────────────────────────
+    ch = clickhouse_connect.get_client(
         host=settings.clickhouse_host,
-        port=settings.clickhouse_port,
+        port=int(settings.clickhouse_port),
         database=settings.clickhouse_db,
-        user=settings.clickhouse_user,
+        username=settings.clickhouse_user,
         password=settings.clickhouse_password,
     )
 
-    client.execute("""
-        CREATE TABLE IF NOT EXISTS scoring_summary (
-            category_id      Int32,
-            customer_count   Int64,
-            avg_affinity     Float64,
-            avg_churn_risk   Float64,
-            avg_timing       Float64,
-            avg_visit        Float64,
-            batch_date       Date,
-            synced_at        DateTime DEFAULT now()
-        ) ENGINE = ReplacingMergeTree(synced_at)
-        ORDER BY (category_id, batch_date)
-    """)
+    total_rows = 0
 
-    data = [
-        (row[0], row[1], float(row[2] or 0), float(row[3] or 0),
-         float(row[4] or 0), float(row[5] or 0), row[6] or date.today())
-        for row in summary
-    ]
-    client.execute(
-        "INSERT INTO scoring_summary "
-        "(category_id, customer_count, avg_affinity, avg_churn_risk, avg_timing, avg_visit, batch_date) "
-        "VALUES",
-        data,
-    )
-    log.info(f"ClickHouse scoring_summary: {len(data)} カテゴリ")
-    return len(data)
+    # ── 1. customer_scores_daily ──────────────────────────────
+    # 顧客×バッチ日付ごとに category_affinity Map を組み立てる
+    from collections import defaultdict as _dd
+    csd_buf: dict[tuple[int, date], dict] = {}
+    for uid, batch_date, cat_id, aff, churn_s, timing_s, visit_s in all_scores:
+        key = (uid, batch_date)
+        if key not in csd_buf:
+            csd_buf[key] = {
+                "uid": str(uid),
+                "date": batch_date,
+                "affinity": {},
+                "churn": float(churn_s or 0.0),
+                "timing": float(timing_s or 0.0),
+                "visit": float(visit_s or 0.0),
+            }
+        csd_buf[key]["affinity"][str(cat_id)] = float(aff or 0.0)
+
+    if csd_buf:
+        csd_data = [
+            [v["uid"], v["date"], v["affinity"], v["churn"], v["timing"], v["visit"]]
+            for v in csd_buf.values()
+        ]
+        ch.insert(
+            "customer_scores_daily",
+            csd_data,
+            column_names=["unified_id", "score_date", "category_affinity",
+                          "churn_risk", "purchase_timing", "visit_prediction"],
+        )
+        log.info(f"ClickHouse customer_scores_daily: {len(csd_data)} 行")
+        total_rows += len(csd_data)
+
+    # ── 2. category_affinity_summary ─────────────────────────
+    if all_cat_aff:
+        cas_data = [
+            [row[0], int(row[1]), _age_group(row[2]), "",
+             float(row[3] or 0.0), int(row[4] or 0)]
+            for row in all_cat_aff
+        ]
+        ch.insert(
+            "category_affinity_summary",
+            cas_data,
+            column_names=["week", "category_id", "age_group", "gender",
+                          "avg_score", "customer_count"],
+        )
+        log.info(f"ClickHouse category_affinity_summary: {len(cas_data)} 行")
+        total_rows += len(cas_data)
+
+    # ── 3. churn_summary_weekly ──────────────────────────────
+    if all_churn:
+        csw_data = [
+            [row[0], str(row[1]), int(row[2] or 0), 0.0]
+            for row in all_churn
+        ]
+        ch.insert(
+            "churn_summary_weekly",
+            csw_data,
+            column_names=["week", "label", "customer_count", "avg_days_since_purchase"],
+        )
+        log.info(f"ClickHouse churn_summary_weekly: {len(csw_data)} 行")
+        total_rows += len(csw_data)
+
+    ch.close()
+    log.info(f"ClickHouse 同期完了: 合計 {total_rows} 行")
+    return total_rows
 
 
 # ── メイン ────────────────────────────────────────────────────

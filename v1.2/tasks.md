@@ -338,9 +338,13 @@ vagrant ssh -c "
 
 ### 3-4. ClickHouse集計テーブル更新
 
-- [-] **3-4-1. ClickHouseへの集計データ書き込み**
-  - `clickhouse_driver` パッケージ未インストールのためスキップ（フォールバック実装済み）
-  - 配置: `application/backend/app/scoring/runner.py`（内包・スキップ時は警告のみ）
+- [x] **3-4-1. ClickHouseへの集計データ書き込み**
+  - `clickhouse_connect`（HTTP クライアント、インストール済み）に切り替えて実装
+  - 書き込み先テーブル（3テーブル）:
+    - `customer_scores_daily`: 顧客別スコア（category_affinity を Map 型で格納）293行
+    - `category_affinity_summary`: カテゴリ×年代別集計 479行
+    - `churn_summary_weekly`: チャーンリスク分布（high/medium/low）3行
+  - 配置: `application/backend/app/scoring/runner.py`（`sync_to_clickhouse` 関数）
 
 ### 3-5. 初回スコアリング実行
 
@@ -355,7 +359,7 @@ vagrant ssh -c "
 ### 🧪 テスト（フェーズ3）
 - [x] `customer_scores` テーブルに全スコア種別のレコードが存在すること
 - [x] Redis に `score:*` キーが存在し、TTLが設定されていること
-- [-] ClickHouse に集計データが書き込まれていること（clickhouse_driver 未インストールのためスキップ）
+- [x] ClickHouse に集計データが書き込まれていること（customer_scores_daily/category_affinity_summary/churn_summary_weekly）
 
 ### ✅ フェーズ3 完了基準
 - [x] 4種類のスコアが計算され customer_scores に書き込まれること
@@ -366,7 +370,7 @@ vagrant ssh -c "
 - 実施日: 2026-03-19
 - customer_scores 件数: **937行**（293顧客 × 13カテゴリ）
 - Redis スコアキー数: 937キー（TTL=86400s）
-- ClickHouse 同期: スキップ（clickhouse_driver 未インストール。フォールバック実装済み）
+- ClickHouse 同期: **完了**（clickhouse_connect に切り替え。customer_scores_daily=293行 / category_affinity_summary=479行 / churn_summary_weekly=3行）
 - 追加: `unified_products` に (unified_id, category_id) UNIQUE制約を追加
 - 追加: `customer_scores` に (unified_id, category_id) UNIQUE制約を追加
 - 追加: `app/scoring/inventory_sync.py` — inventory.updates → unified_products UPSERT
