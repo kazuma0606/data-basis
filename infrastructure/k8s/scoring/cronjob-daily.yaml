@@ -1,0 +1,27 @@
+# スコアリングバッチ（日次）
+# カテゴリ親和性スコアを毎日2時に更新する
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scoring-daily
+  namespace: technomart
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: scoring
+              image: 192.168.56.10:5000/technomart-backend:latest
+              command: ["python3", "-m", "app.scoring.runner", "--mode", "daily"]
+              envFrom:
+                - configMapRef:
+                    name: backend-config
+                - secretRef:
+                    name: backend-secret

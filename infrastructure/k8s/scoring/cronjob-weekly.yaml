@@ -1,0 +1,27 @@
+# スコアリングバッチ（週次）
+# チャーンリスク / 購買タイミング / 来店予測スコアを毎週日曜3時に更新する
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: scoring-weekly
+  namespace: technomart
+spec:
+  schedule: "0 3 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: scoring
+              image: 192.168.56.10:5000/technomart-backend:latest
+              command: ["python3", "-m", "app.scoring.runner", "--mode", "weekly"]
+              envFrom:
+                - configMapRef:
+                    name: backend-config
+                - secretRef:
+                    name: backend-secret
