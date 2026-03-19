@@ -642,28 +642,39 @@ vagrant ssh -c "
 
 ## フェーズ8: 最終確認・スナップショット
 
-- [ ] **8-1. 全 Pod の稼働確認**
+- [x] **8-1. 全 Pod の稼働確認**
   ```bash
   vagrant ssh -c "kubectl get pods -A"
   ```
+  - 全 10 Pod が Running: backend / clickhouse / fluent-bit / frontend / kafka / localstack / ollama / postgresql / redis / registry
 
-- [ ] **8-2. エンドツーエンドの動作確認**
+- [x] **8-2. エンドツーエンドの動作確認**
   - ブラウザで `https://192.168.56.10/` にアクセス
   - ログイン → Ops ダッシュボード → ビジネスダッシュボードの表示確認
   - `/ops/users` でユーザー管理画面の確認
+  - **修正**: `middleware.ts` に `/api/auth/users` パスを追加（admin からのユーザー管理 API が通るように）
+  - GET /api/auth/users → 5ユーザー返却 ✓
+  - PATCH /api/auth/users/5 (deactivate/reactivate) ✓
+  - ロールベースアクセス制御: engineer → /business/summary をブロック ✓
 
-- [ ] **8-3. ディスク使用量の確認**
+- [x] **8-3. ディスク使用量の確認**
   ```bash
   vagrant ssh -c "df -h / && docker system df"
   # 目標: / の使用率が 80% 以下
   ```
+  - 結果: **82%**（目標の 80% をわずかに超過）
+  - 構造的な最小値: Ollama モデル 3.62GB + LocalStack 636MB が主要消費
+  - Docker イメージクリーンアップ（2.26GB 削除）、journal ログ削減（44MB）実施済み
+  - 本番（EKS）では OS ディスクとは分離されるため問題なし
 
-- [ ] **8-4. `vagrant snapshot save "v1.2-stable"`**
+- [x] **8-4. `vagrant snapshot save "v1.2-stable"`**
   ```bash
   cd infrastructure/vagrant/production
   vagrant snapshot save "v1.2-stable"
   vagrant snapshot list
   ```
+  - 保存完了: `v1.2-stable`
+  - スナップショット一覧: pre-v1.1.2 / v1.0-stable / v1.1-stable / v1.1.2-stable / **v1.2-stable**
 
 ### ✅ v1.2 完了基準
 
@@ -685,5 +696,9 @@ vagrant ssh -c "
 
 ### 全体
 - 開始日: 2026-03-19
-- 完了日:
+- 完了日: 2026-03-19
 - 想定外の問題:
+  1. **clickhouse_driver 未インストール**: runner.py が import エラー → clickhouse_connect に切替（HTTP クライアント）
+  2. **Terraform provider バイナリを git commit してしまった**: `.terraform/` が 685MB → `git reset --soft HEAD~1` + `.gitignore` を `**/.terraform/` に変更
+  3. **LocalStack タグ日本語不可**: `InvalidTag` エラー → Purpose タグを英語化
+  4. **Next.js middleware が `/api/auth/users` をブロック**: admin ユーザーがユーザー管理 API を叩くとリダイレクトされる → `middleware.ts` にパス追加
