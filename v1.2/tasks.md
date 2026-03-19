@@ -607,27 +607,36 @@ vagrant ssh -c "
 
 > ローカルだから試せる。本番移行前に確認しておく。
 
-- [ ] **7-1. Pod を意図的に落としてデータ欠損が起きないか確認**
-  ```bash
-  # Kafka Pod を落とす
-  vagrant ssh -c "kubectl delete pod -n data-basis -l app=kafka"
-  # → Pod が自動復旧すること、Kafka offset が保持されること
-  ```
+- [x] **7-1. Pod を意図的に落としてデータ欠損が起きないか確認**
+  - `kubectl delete pod -n technomart kafka-0` を実行
+  - **復旧時間**: 約 40 秒で Running に戻った
+  - **offset 完全一致**: ec.events (0→30788, 1→30539, 2→30435) / LAG=0（全パーティション）
+  - **トピック一覧保持**: ec.events / pos.transactions / app.behaviors / inventory.updates / customer.scores 全存在
 
-- [ ] **7-2. PVC のデータ永続化確認**
-  ```bash
-  # PostgreSQL Pod を再起動してもデータが残ること
-  vagrant ssh -c "kubectl rollout restart deployment/postgres -n data-basis"
-  vagrant ssh -c "kubectl exec -n data-basis deploy/postgres -- psql -U technomart -d technomart -c 'SELECT COUNT(*) FROM unified_customers'"
-  ```
+- [x] **7-2. PVC のデータ永続化確認**
+  - `kubectl rollout restart deployment/postgresql -n technomart` を実行
+  - **再起動後のレコード数（全一致）**:
+    - unified_customers: 5106 件
+    - customer_scores: 937 件
+    - staging_ec_events: 91762 件
+    - unified_products (embedding): 23/23 件
 
-- [ ] **7-3. Kafka offset 管理の確認（コンシューマーが途中から再開できるか）**
-  - コンシューマーを途中で停止 → 再起動 → 欠損なく処理継続できること
+- [x] **7-3. Kafka offset 管理の確認（コンシューマーが途中から再開できるか）**
+  - テストメッセージ 10件 → LAG=10 を確認
+  - 1回目コンシューマー実行 → 10件処理、LAG=0、offset コミット済み
+  - さらに 10件追加 → LAG=10
+  - 2回目コンシューマー実行 → **新規の 10件だけ処理**（重複なし）、LAG=0
+  - offset の進み: p0: 30792→30794 / p1: 30539→30544 / p2: 30441→30444（正確に +10）
 
 ### 作業メモ（フェーズ7）
-- 実施日:
-- Kafka 再起動後の offset 確認:
-- PG 再起動後のレコード数:
+- 実施日: 2026-03-19
+- Kafka Pod 再起動後の offset: 削除前と完全一致（LAG=0 維持）。PVC (kafka-pvc 10Gi) により保持
+- PG 再起動後のレコード数: 5106 / 937 / 91762 / 23。PVC (postgresql-pvc 20Gi) により保持
+- コンシューマー offset 管理: GROUP_ID='pg-writer' による commit offset が Kafka に保持され、再起動後も続きから処理
+- **本番移行への示唆**:
+  - PVC → EBS/EFS への移行でデータ永続性は維持される
+  - Kafka の offset commit は GroupID 単位で Kafka 内部に保持（`__consumer_offsets` トピック）
+  - Pod 再起動（ローリングアップデート含む）でも offset は失われない
 
 ---
 
