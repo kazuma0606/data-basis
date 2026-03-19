@@ -8,6 +8,7 @@ import {
   GitBranch,
   Activity,
   TableProperties,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/ops/pipeline",  label: "パイプライン",  icon: GitBranch },
   { href: "/ops/scoring",   label: "スコアリング",  icon: Activity },
   { href: "/ops/schema",    label: "スキーマ",      icon: TableProperties },
+  { href: "/ops/users",     label: "ユーザー管理",  icon: Users },
 ];
 
 export function OpsSidebar() {

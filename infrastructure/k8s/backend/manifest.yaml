@@ -94,17 +94,17 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 15
 ---
-# ── Service: ClusterIP（内部アクセス用） + NodePort（外部アクセス用） ──
+# ── Service: ClusterIP（Ingress 経由のみ。NodePort 廃止）──────────
+# 本番(EKS): type: ClusterIP のまま ALB Ingress 経由でアクセス
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
   namespace: technomart
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: backend
   ports:
     - port: 8000
       targetPort: 8000
-      nodePort: 30800

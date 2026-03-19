@@ -71,8 +71,8 @@ data:
   BACKEND_URL: "http://backend.technomart.svc.cluster.local:8000"
   NEXT_TELEMETRY_DISABLED: "1"
   NODE_ENV: "production"
-  # HTTP アクセス時はクッキーの Secure フラグを無効化（本番 HTTPS では "true" に変更）
-  SECURE_COOKIES: "false"
+  # Ingress 経由で HTTPS アクセスするため Secure Cookie を有効化
+  SECURE_COOKIES: "true"
   # k8s API の TLS 検証に使う CA 証明書（SA トークンと同じパスに自動マウントされる）
   NODE_EXTRA_CA_CERTS: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 ---
@@ -148,17 +148,17 @@ spec:
             path: /technomart/versions
             type: Directory
 ---
-# ── Service: ClusterIP（内部アクセス用） + NodePort（外部アクセス用） ──
+# ── Service: ClusterIP（Ingress 経由のみ。NodePort 廃止）──────────
+# 本番(EKS): type: ClusterIP のまま ALB Ingress 経由でアクセス
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
   namespace: technomart
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: frontend
   ports:
     - port: 3000
       targetPort: 3000
-      nodePort: 30300

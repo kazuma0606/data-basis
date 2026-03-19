@@ -1,0 +1,29 @@
+# Technomart Ingress
+# ホスト名なし（IPアドレス直アクセス対応）
+# HTTP → HTTPS リダイレクト
+# / → frontend（Next.js が /api/* を内部でバックエンドへプロキシ）
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: technomart
+  namespace: technomart
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+spec:
+  ingressClassName: nginx
+  tls:
+    - secretName: technomart-tls
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 3000

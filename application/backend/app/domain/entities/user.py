@@ -12,6 +12,7 @@ class UserRecord:
     hashed_password: str
     role: Role
     store_id: int | None = None
+    is_active: bool = True
 
     def to_auth_user(self) -> "AuthUser":
         return AuthUser(
