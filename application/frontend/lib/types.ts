@@ -2,6 +2,14 @@
 
 export type Role = "engineer" | "marketer" | "store_manager" | "admin";
 
+export interface UserInfo {
+  id: number;
+  username: string;
+  role: Role;
+  store_id: number | null;
+  is_active: boolean;
+}
+
 // ── Business ──────────────────────────────────────────────────────────────
 
 export interface KpiSummary {

@@ -159,6 +159,70 @@ async def get_recommendations(
     ]
 
 
+# ── 類似商品検索 ──────────────────────────────────────────────
+
+@router.get("/products/{product_id}/similar", response_model=list[ProductRecommendationSchema])
+async def get_similar_products(
+    product_id: int,
+    _: BusinessUser,
+    product_repo: Annotated[IProductRepository, Depends(get_product_repository)],
+    llm: Annotated[ILLMClient, Depends(get_llm_client)],
+    limit: int = Query(10, ge=1, le=50),
+) -> list[ProductRecommendationSchema]:
+    """商品 ID に基づく類似商品を pgvector で検索する"""
+    from sqlalchemy import text
+    from app.dependencies import get_db
+
+    # unified_products から対象商品の embedding を取得
+    db = product_repo._db  # type: ignore[attr-defined]
+    row = await db.execute(
+        text("""
+            SELECT unified_product_id, name, brand, category_id, embedding::text
+            FROM unified_products
+            WHERE unified_product_id = :pid AND embedding IS NOT NULL
+        """),
+        {"pid": product_id},
+    )
+    product = row.fetchone()
+
+    if product is None:
+        # embedding 未生成 → 商品テキストで Ollama embed してから検索
+        row2 = await db.execute(
+            text("SELECT name, brand, category_id FROM unified_products WHERE unified_product_id = :pid"),
+            {"pid": product_id},
+        )
+        p2 = row2.fetchone()
+        if p2 is None:
+            from app.domain.exceptions import NotFoundError
+            raise NotFoundError("Product", product_id)
+        parts = [p2[0]]
+        if p2[1]:
+            parts.append(p2[1])
+        if p2[2]:
+            parts.append(f"category:{p2[2]}")
+        embedding = await llm.embed(" ".join(parts))
+    else:
+        # 既存 embedding を float リストに変換
+        vec_str = product[4].strip("[]")
+        embedding = [float(v) for v in vec_str.split(",")]
+
+    results = await product_repo.find_similar(embedding=embedding, limit=limit + 1)
+    # 自身を除外
+    filtered = [r for r in results if r.unified_product_id != product_id][:limit]
+
+    return [
+        ProductRecommendationSchema(
+            unified_product_id=r.unified_product_id,
+            name=r.name,
+            brand=r.brand,
+            price=r.price,
+            category_id=r.category_id,
+            similarity=r.similarity,
+        )
+        for r in filtered
+    ]
+
+
 # ── セグメント分析 ────────────────────────────────────────────
 
 @router.get("/segments/summary", response_model=list[SegmentSummarySchema])

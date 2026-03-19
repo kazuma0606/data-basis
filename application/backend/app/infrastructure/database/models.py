@@ -8,6 +8,56 @@ class Base(DeclarativeBase):
     pass
 
 
+# ── ステージング層（Kafkaコンシューマーが書き込む生データ） ──────────────
+
+
+class StagingEcCustomerModel(Base):
+    """ECシステムから取り込んだ生の顧客レコード（クレンジング前）"""
+
+    __tablename__ = "staging_ec_customers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ec_user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    name_kanji: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    name_kana: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    birth_date: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 西暦 YYYY-MM-DD
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 生フォーマット
+    prefecture: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 正規化前
+    registered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class StagingPosMemberModel(Base):
+    """POSシステムから取り込んだ生の会員レコード（クレンジング前）"""
+
+    __tablename__ = "staging_pos_members"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    name_kana: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 全角スペース混在
+    birth_date_jp: Mapped[str | None] = mapped_column(String(10), nullable=True)  # 和暦 e.g. S55
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 生フォーマット
+    registered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class StagingAppUserModel(Base):
+    """アプリから取り込んだ生のユーザーレコード（クレンジング前）"""
+
+    __tablename__ = "staging_app_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    uid: Mapped[str] = mapped_column(String(36), nullable=False)  # UUID
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 生フォーマット
+    name: Mapped[str | None] = mapped_column(String(100), nullable=True)  # 漢字 or カナ姓のみ
+    registered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    processed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class UserModel(Base):
     __tablename__ = "users"
 
@@ -16,6 +66,7 @@ class UserModel(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False)
     store_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class PipelineJobModel(Base):
