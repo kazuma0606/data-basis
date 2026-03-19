@@ -8,12 +8,12 @@ verification/*.db
 verification/uv.lock
 verification/src/__pycache__/
 
-# Terraform
-infrastructure/terraform/.terraform/
-infrastructure/terraform/*.tfstate
-infrastructure/terraform/*.tfstate.backup
-infrastructure/terraform/terraform.tfvars
-infrastructure/terraform/.terraform.lock.hcl
+# Terraform（サブディレクトリを含む全階層に適用）
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+**/terraform.tfvars
+**/.terraform.lock.hcl
 
 # Vagrant
 infrastructure/vagrant/.vagrant/
