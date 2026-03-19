@@ -193,7 +193,7 @@ vagrant ssh -c "
 
 ### 2-1. Kafkaトピック作成
 
-- [ ] **2-1-1. 必要なトピックを作成**
+- [x] **2-1-1. 必要なトピックを作成**
   ```bash
   vagrant ssh -c "
     kubectl exec -n data-basis deploy/kafka -- bash -c '
@@ -205,7 +205,7 @@ vagrant ssh -c "
   "
   ```
 
-- [ ] **2-1-2. トピック設定確認**
+- [x] **2-1-2. トピック設定確認**
   ```bash
   vagrant ssh -c "
     kubectl exec -n data-basis deploy/kafka -- \
@@ -215,32 +215,32 @@ vagrant ssh -c "
 
 ### 2-2. プロデューサー実装
 
-- [ ] **2-2-1. EC イベントプロデューサー**
+- [x] **2-2-1. EC イベントプロデューサー**
   - ソース: `infrastructure/data/` 内の synthetic data
   - トピック: `ec.events`
   - メッセージ形式: JSON（customer_id, event_type, product_id, timestamp, ...）
   - 配置: `application/backend/app/pipelines/producers/ec_producer.py`
 
-- [ ] **2-2-2. POSトランザクションプロデューサー**
+- [x] **2-2-2. POSトランザクションプロデューサー**
   - トピック: `pos.transactions`
   - 配置: `application/backend/app/pipelines/producers/pos_producer.py`
 
-- [ ] **2-2-3. アプリ行動ログプロデューサー**
+- [x] **2-2-3. アプリ行動ログプロデューサー**
   - トピック: `app.behaviors`
   - 配置: `application/backend/app/pipelines/producers/app_producer.py`
 
-- [ ] **2-2-4. 在庫変動プロデューサー**
+- [x] **2-2-4. 在庫変動プロデューサー**
   - トピック: `inventory.updates`
   - 配置: `application/backend/app/pipelines/producers/inventory_producer.py`
 
 ### 2-3. コンシューマー実装
 
-- [ ] **2-3-1. S3（LocalStack）書き出しコンシューマー**
+- [x] **2-3-1. S3（LocalStack）書き出しコンシューマー**
   - 全トピックを購読 → `s3://technomart-raw/{topic}/{date}/` に書き出し
   - 配置: `application/backend/app/pipelines/consumers/s3_consumer.py`
   - S3バケット: `technomart-raw`（LocalStack内に作成）
 
-- [ ] **2-3-2. PostgreSQL取り込みコンシューマー**
+- [x] **2-3-2. PostgreSQL取り込みコンシューマー**
   - `ec.events` → `staging_ec_events`
   - `pos.transactions` → `staging_pos_transactions`
   - `app.behaviors` → `staging_app_behaviors`
@@ -248,7 +248,7 @@ vagrant ssh -c "
 
 ### 2-4. LocalStack S3バケット準備
 
-- [ ] **2-4-1. `technomart-raw` バケットを作成**
+- [x] **2-4-1. `technomart-raw` バケットを作成**
   ```bash
   vagrant ssh -c "
     aws --endpoint-url=http://192.168.56.10:31566 s3 mb s3://technomart-raw
@@ -258,32 +258,33 @@ vagrant ssh -c "
 
 ### 2-5. パイプライン統合実行
 
-- [ ] **2-5-1. 全プロデューサーを順番に実行（synthetic data 投入）**
+- [x] **2-5-1. 全プロデューサーを順番に実行（synthetic data 投入）**
 
-- [ ] **2-5-2. S3コンシューマーの動作確認**
-  ```bash
-  vagrant ssh -c "
-    aws --endpoint-url=http://192.168.56.10:31566 s3 ls s3://technomart-raw/ --recursive | head -20
-  "
-  ```
+- [x] **2-5-2. S3コンシューマーの動作確認**
 
-- [ ] **2-5-3. PostgreSQL ステージングテーブルへの取り込み確認**
+- [x] **2-5-3. PostgreSQL ステージングテーブルへの取り込み確認**
 
 ### 🧪 テスト（フェーズ2）
-- [ ] Kafka全トピックにメッセージが流れていること
-- [ ] S3（LocalStack）の `technomart-raw/` にデータが書き出されていること
-- [ ] PostgreSQL ステージングテーブルにレコードが存在すること
+- [x] Kafka全トピックにメッセージが流れていること
+- [x] S3（LocalStack）の `technomart-raw/` にデータが書き出されていること
+- [x] PostgreSQL ステージングテーブルにレコードが存在すること
 
 ### ✅ フェーズ2 完了基準
-- [ ] synthetic data が Kafka 経由で流れる end-to-end フローが動作すること
-- [ ] S3 に raw データが保存されること
-- [ ] PostgreSQL ステージングに取り込まれること
+- [x] synthetic data が Kafka 経由で流れる end-to-end フローが動作すること
+- [x] S3 に raw データが保存されること
+- [x] PostgreSQL ステージングに取り込まれること
 
 ### 作業メモ（フェーズ2）
-- 実施日:
-- 各トピックのメッセージ数:
-- S3 オブジェクト数:
-- PG ステージング件数:
+- 実施日: 2026-03-19
+- Kafkaメッセージ数: ec.events=4348件 / pos.transactions=1758件 / app.behaviors=2064件 / inventory.updates=23件（合計8193件）
+  - ※ プロデューサーを複数回実行したためKafka蓄積は 151290件（offset=earliest で全量）
+- S3オブジェクト数: 4ファイル（app.behaviors=6.2MB / ec.events=16.5MB / inventory.updates=24KB / pos.transactions=2.7MB）
+- PGステージング件数: staging_ec_events=91762件 / staging_pos_transactions=20528件 / staging_app_behaviors=39000件（計151290件）
+- **実装詳細**:
+  - `_to_int()` / `_to_float()` / `_to_dt()` ヘルパー関数で型安全な変換を実装
+  - Kafkaメッセージの全フィールドが文字列として届くため、INSERT前に型変換が必要
+  - S3コンシューマー: NotCoordinatorForGroupError が発生したが最終的に成功
+  - PGコンシューマー: staging_*_events/transactions/behaviors テーブルを CREATE TABLE IF NOT EXISTS で自動作成
 
 ---
 
