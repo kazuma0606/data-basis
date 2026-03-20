@@ -12,7 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 data-basis/
-  v1.0/                 # プロジェクト全体の要件・設計ドキュメント（v1.0）
+  versions/             # バージョン別 計画・タスク・仕様書
+    v1.0/               # 要件・設計ドキュメント（初版）
+    v1.1/               # 運用安定化（k3s自動起動・ローカルレジストリ等）
+    v1.1.1/             # Pod状態可視化
+    v1.1.2/             # デプロイ改善
+    v1.2/               # データフロー実装（名寄せ・Kafka・スコアリング）
+    v1.2.1/             # 未着手（将来）
+    v1.2g/              # CI/CD基盤整備（gitleaks・ruff・mypy・pre-commit）
+    v1.3/               # 監視・オブザーバビリティ（Prometheus・Grafana）← 現在
+    v1.3.1/             # 未着手（将来）
   infrastructure/       # インフラコード
     vagrant/            # VM管理（Vagrantfile）← VM起動はここ
     terraform/          # 将来：VM内サービスプロビジョニング用（現在は未使用）
@@ -142,9 +151,12 @@ Next.js `middleware.ts` でJWT検証 → ロールに応じてルーティング
 
 ## 設計ドキュメント
 
-- `v1.0/company.md` — 発注元（テクノマート）の背景・制約
-- `v1.0/user_story.md` — ユーザーストーリー・スコアリング設計
-- `v1.0/data_problems.md` — 既存データの問題点
-- `v1.0/architecture.md` — インフラ全体構成
-- `v1.0/data_schema.md` — テーブル設計・Kafkaトピック対応
+- `versions/v1.0/company.md` — 発注元（テクノマート）の背景・制約
+- `versions/v1.0/user_story.md` — ユーザーストーリー・スコアリング設計
+- `versions/v1.0/data_problems.md` — 既存データの問題点
+- `versions/v1.0/architecture.md` — インフラ全体構成
+- `versions/v1.0/data_schema.md` — テーブル設計・Kafkaトピック対応
 - `application/plan/app_requirements.md` — ダッシュボード・API・認証設計
+- `versions/v1.2/spec.md` — 認証・K8s全Pod・デプロイ手順の詳細仕様書
+- `versions/v1.3/plan.md` — 監視スタック設計・SLI/SLO・アラート閾値
+- `versions/v1.3/tasks.md` — v1.3 タスクリスト（現在のバージョン）
