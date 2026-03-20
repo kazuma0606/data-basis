@@ -298,7 +298,7 @@ async def run_batch(mode: str) -> None:
                         match_method: str | None = None
 
                         for existing in existing_customers:
-                            result = do_match(
+                            match_result = do_match(
                                 new_email=rec.email,
                                 new_phone=rec.phone,
                                 new_name=rec.name,
@@ -308,9 +308,9 @@ async def run_batch(mode: str) -> None:
                                 existing_name=existing["name"],
                                 existing_birthdate=existing["birth_date"],
                             )
-                            if result.matched:
+                            if match_result.matched:
                                 matched_uid = existing["unified_id"]
-                                match_method = result.method
+                                match_method = match_result.method
                                 break
 
                         if matched_uid is not None:
