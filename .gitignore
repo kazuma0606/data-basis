@@ -15,6 +15,10 @@ verification/src/__pycache__/
 **/terraform.tfvars
 **/.terraform.lock.hcl
 
+# TLS 証明書・秘密鍵（ローカル生成、共有不要）
+infrastructure/k8s/ingress/*.key
+infrastructure/k8s/ingress/*.crt
+
 # Vagrant
 infrastructure/vagrant/.vagrant/
 infrastructure/vagrant/minimal/.vagrant/
