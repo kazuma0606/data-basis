@@ -22,9 +22,7 @@ class PostgresUserRepository:
         self._db = db
 
     async def find_by_username(self, username: str) -> UserRecord | None:
-        result = await self._db.execute(
-            select(UserModel).where(UserModel.username == username)
-        )
+        result = await self._db.execute(select(UserModel).where(UserModel.username == username))
         user = result.scalar_one_or_none()
         if user is None:
             return None
@@ -39,16 +37,12 @@ class PostgresUserRepository:
 
     async def find_by_id_or_username(self, username: str) -> UserRecord | None:
         """重複チェック用（is_active に関わらず検索）"""
-        result = await self._db.execute(
-            select(UserModel).where(UserModel.username == username)
-        )
+        result = await self._db.execute(select(UserModel).where(UserModel.username == username))
         user = result.scalar_one_or_none()
         return _to_record(user) if user else None
 
     async def find_by_id(self, user_id: int) -> UserRecord | None:
-        result = await self._db.execute(
-            select(UserModel).where(UserModel.id == user_id)
-        )
+        result = await self._db.execute(select(UserModel).where(UserModel.id == user_id))
         user = result.scalar_one_or_none()
         return _to_record(user) if user else None
 
@@ -77,9 +71,7 @@ class PostgresUserRepository:
         role: str | None = None,
         is_active: bool | None = None,
     ) -> UserRecord | None:
-        result = await self._db.execute(
-            select(UserModel).where(UserModel.id == user_id)
-        )
+        result = await self._db.execute(select(UserModel).where(UserModel.id == user_id))
         user = result.scalar_one_or_none()
         if user is None:
             return None

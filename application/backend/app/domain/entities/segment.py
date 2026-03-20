@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class SegmentLabel(str, Enum):
+class SegmentLabel(StrEnum):
     ACTIVE = "active"
     DORMANT = "dormant"
     CHURNED = "churned"

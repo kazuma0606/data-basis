@@ -18,11 +18,11 @@ from app.interfaces.repositories.customer_repository import ICustomerRepository
 from app.interfaces.repositories.product_repository import IProductRepository
 from app.presentation.schemas.business import (
     CategoryAffinitySchema,
+    ChurnLabelSchema,
     CustomerDetailSchema,
     CustomerListResponse,
     CustomerScoreSchema,
     CustomerSummarySchema,
-    ChurnLabelSchema,
     KpiSummarySchema,
     NLQueryRequest,
     NLQueryResponse,
@@ -48,6 +48,7 @@ BusinessUser = Annotated[AuthUser, Depends(require_business_role)]
 
 # ── KPIサマリ ─────────────────────────────────────────────────
 
+
 @router.get("/summary", response_model=KpiSummarySchema)
 async def get_summary(
     _: BusinessUser,
@@ -64,6 +65,7 @@ async def get_summary(
 
 
 # ── 顧客一覧・詳細 ────────────────────────────────────────────
+
 
 @router.get("/customers", response_model=CustomerListResponse)
 async def list_customers(
@@ -116,7 +118,9 @@ async def get_customer(
             last_purchase_at=customer.churn_label.last_purchase_at,
             days_since_purchase=customer.churn_label.days_since_purchase,
             updated_at=customer.churn_label.updated_at,
-        ) if customer.churn_label else None,
+        )
+        if customer.churn_label
+        else None,
         scores=[
             CustomerScoreSchema(
                 category_id=s.category_id,
@@ -133,7 +137,10 @@ async def get_customer(
 
 # ── レコメンデーション ─────────────────────────────────────────
 
-@router.get("/customers/{unified_id}/recommendations", response_model=list[ProductRecommendationSchema])
+
+@router.get(
+    "/customers/{unified_id}/recommendations", response_model=list[ProductRecommendationSchema]
+)
 async def get_recommendations(
     unified_id: int,
     _: BusinessUser,
@@ -161,6 +168,7 @@ async def get_recommendations(
 
 # ── 類似商品検索 ──────────────────────────────────────────────
 
+
 @router.get("/products/{product_id}/similar", response_model=list[ProductRecommendationSchema])
 async def get_similar_products(
     product_id: int,
@@ -171,7 +179,6 @@ async def get_similar_products(
 ) -> list[ProductRecommendationSchema]:
     """商品 ID に基づく類似商品を pgvector で検索する"""
     from sqlalchemy import text
-    from app.dependencies import get_db
 
     # unified_products から対象商品の embedding を取得
     db = product_repo._db  # type: ignore[attr-defined]
@@ -188,12 +195,16 @@ async def get_similar_products(
     if product is None:
         # embedding 未生成 → 商品テキストで Ollama embed してから検索
         row2 = await db.execute(
-            text("SELECT name, brand, category_id FROM unified_products WHERE unified_product_id = :pid"),
+            text(
+                "SELECT name, brand, category_id"
+                " FROM unified_products WHERE unified_product_id = :pid"
+            ),
             {"pid": product_id},
         )
         p2 = row2.fetchone()
         if p2 is None:
             from app.domain.exceptions import NotFoundError
+
             raise NotFoundError("Product", product_id)
         parts = [p2[0]]
         if p2[1]:
@@ -225,13 +236,16 @@ async def get_similar_products(
 
 # ── セグメント分析 ────────────────────────────────────────────
 
+
 @router.get("/segments/summary", response_model=list[SegmentSummarySchema])
 async def segment_summary(
     _: BusinessUser,
     analytics: Annotated[IAnalyticsRepository, Depends(get_analytics_repository)],
 ) -> list[SegmentSummarySchema]:
     items = await GetSegmentSummaryUseCase(analytics).execute()
-    return [SegmentSummarySchema(label=i.label, count=i.count, percentage=i.percentage) for i in items]
+    return [
+        SegmentSummarySchema(label=i.label, count=i.count, percentage=i.percentage) for i in items
+    ]
 
 
 @router.get("/segments/trend", response_model=list[SegmentTrendSchema])
@@ -254,6 +268,7 @@ async def segment_trend(
 
 # ── 売上・親和性分析 ──────────────────────────────────────────
 
+
 @router.get("/analytics/sales", response_model=list[SalesByChannelSchema])
 async def sales_analytics(
     current_user: BusinessUser,
@@ -261,6 +276,7 @@ async def sales_analytics(
     days: int = Query(30, ge=1, le=365),
 ) -> list[SalesByChannelSchema]:
     from app.domain.value_objects.role import Role
+
     store_id = current_user.store_id if current_user.role == Role.STORE_MANAGER else None
     items = await GetSalesAnalyticsUseCase(analytics).execute(days=days, store_id=store_id)
     return [
@@ -299,6 +315,7 @@ async def affinity_analytics(
 
 
 # ── 自然言語クエリ ─────────────────────────────────────────────
+
 
 @router.post("/query", response_model=NLQueryResponse)
 async def natural_language_query(

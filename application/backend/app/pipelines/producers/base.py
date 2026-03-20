@@ -12,7 +12,7 @@ Kafka プロデューサー共通設定
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from kafka import KafkaProducer
 
@@ -34,7 +34,7 @@ def make_producer() -> KafkaProducer:
 def send(producer: KafkaProducer, topic: str, payload: dict) -> None:
     """メッセージをラップして送信する。"""
     message = {
-        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_at": datetime.now(UTC).isoformat(),
         **payload,
     }
     producer.send(topic, value=message)

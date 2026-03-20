@@ -23,7 +23,7 @@ import asyncio
 import logging
 import math
 from collections import defaultdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -75,7 +75,9 @@ def _visit_score(days_since: int | None, avg_interval: float | None) -> float:
 # ── データロード ──────────────────────────────────────────────
 
 
-async def load_id_map(session: AsyncSession) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
+async def load_id_map(
+    session: AsyncSession,
+) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
     """customer_id_map から source_id → unified_id のマッピングを返す。"""
     rows = await session.execute(
         text("SELECT source_system, source_id, unified_id FROM customer_id_map")
@@ -97,7 +99,10 @@ async def load_id_map(session: AsyncSession) -> tuple[dict[str, int], dict[str, 
 async def load_product_categories(session: AsyncSession) -> dict[int, int]:
     """unified_products から product_id → category_id マッピングを返す。"""
     rows = await session.execute(
-        text("SELECT unified_product_id, category_id FROM unified_products WHERE category_id IS NOT NULL")
+        text(
+            "SELECT unified_product_id, category_id"
+            " FROM unified_products WHERE category_id IS NOT NULL"
+        )
     )
     return {pid: cat for pid, cat in rows}
 
@@ -139,7 +144,7 @@ async def compute_category_affinity(
         cat = prod_cat.get(pid) if pid else None
         if cat is None:
             continue
-        spend[uid][cat] += (s or 0.0)
+        spend[uid][cat] += s or 0.0
 
     # カテゴリ別に最大値を取り、0〜1 に正規化
     cat_max: dict[int, float] = defaultdict(float)
@@ -264,7 +269,9 @@ async def compute_purchase_timing(
         if len(dates_sorted) < 2:
             result[uid] = 0.0
             continue
-        intervals = [(dates_sorted[i + 1] - dates_sorted[i]).days for i in range(len(dates_sorted) - 1)]
+        intervals = [
+            (dates_sorted[i + 1] - dates_sorted[i]).days for i in range(len(dates_sorted) - 1)
+        ]
         avg_interval = sum(intervals) / len(intervals)
         days_since = (today - dates_sorted[-1]).days
         result[uid] = _timing_score(days_since, avg_interval)
@@ -307,7 +314,9 @@ async def compute_visit_prediction(
         if len(dates_sorted) < 2:
             result[uid] = 0.0
             continue
-        intervals = [(dates_sorted[i + 1] - dates_sorted[i]).days for i in range(len(dates_sorted) - 1)]
+        intervals = [
+            (dates_sorted[i + 1] - dates_sorted[i]).days for i in range(len(dates_sorted) - 1)
+        ]
         avg_interval = sum(intervals) / len(intervals)
         days_since = (today - dates_sorted[-1]).days
         result[uid] = _visit_score(days_since, avg_interval)
@@ -397,6 +406,7 @@ async def cache_scores_to_redis(
                     "visit": visit.get(uid, 0.0),
                 }
                 import json
+
                 pipe.set(key, json.dumps(value), ex=TTL)
                 count += 1
         await pipe.execute()
@@ -408,6 +418,7 @@ async def cache_scores_to_redis(
 
 
 # ── ClickHouse 集計同期 ────────────────────────────────────────
+
 
 def _age_group(age: float | None) -> str:
     """年齢 → 年代グループ文字列"""
@@ -520,7 +531,6 @@ async def sync_to_clickhouse(session: AsyncSession) -> int:
 
     # ── 1. customer_scores_daily ──────────────────────────────
     # 顧客×バッチ日付ごとに category_affinity Map を組み立てる
-    from collections import defaultdict as _dd
     csd_buf: dict[tuple[int, date], dict] = {}
     for uid, batch_date, cat_id, aff, churn_s, timing_s, visit_s in all_scores:
         key = (uid, batch_date)
@@ -543,8 +553,14 @@ async def sync_to_clickhouse(session: AsyncSession) -> int:
         ch.insert(
             "customer_scores_daily",
             csd_data,
-            column_names=["unified_id", "score_date", "category_affinity",
-                          "churn_risk", "purchase_timing", "visit_prediction"],
+            column_names=[
+                "unified_id",
+                "score_date",
+                "category_affinity",
+                "churn_risk",
+                "purchase_timing",
+                "visit_prediction",
+            ],
         )
         log.info(f"ClickHouse customer_scores_daily: {len(csd_data)} 行")
         total_rows += len(csd_data)
@@ -552,25 +568,27 @@ async def sync_to_clickhouse(session: AsyncSession) -> int:
     # ── 2. category_affinity_summary ─────────────────────────
     if all_cat_aff:
         cas_data = [
-            [row[0], int(row[1]), _age_group(row[2]), "",
-             float(row[3] or 0.0), int(row[4] or 0)]
+            [row[0], int(row[1]), _age_group(row[2]), "", float(row[3] or 0.0), int(row[4] or 0)]
             for row in all_cat_aff
         ]
         ch.insert(
             "category_affinity_summary",
             cas_data,
-            column_names=["week", "category_id", "age_group", "gender",
-                          "avg_score", "customer_count"],
+            column_names=[
+                "week",
+                "category_id",
+                "age_group",
+                "gender",
+                "avg_score",
+                "customer_count",
+            ],
         )
         log.info(f"ClickHouse category_affinity_summary: {len(cas_data)} 行")
         total_rows += len(cas_data)
 
     # ── 3. churn_summary_weekly ──────────────────────────────
     if all_churn:
-        csw_data = [
-            [row[0], str(row[1]), int(row[2] or 0), 0.0]
-            for row in all_churn
-        ]
+        csw_data = [[row[0], str(row[1]), int(row[2] or 0), 0.0] for row in all_churn]
         ch.insert(
             "churn_summary_weekly",
             csw_data,
@@ -627,7 +645,10 @@ async def main_async(mode: str) -> None:
         if mode == "daily" and not churn:
             # 既存スコアを読み込む
             ex_rows = await session.execute(
-                text("SELECT unified_id, churn_risk_score, timing_score, visit_predict_score FROM customer_scores")
+                text(
+                    "SELECT unified_id, churn_risk_score, timing_score, visit_predict_score"
+                    " FROM customer_scores"
+                )
             )
             for uid, cr, ts, vs in ex_rows:
                 churn[uid] = cr

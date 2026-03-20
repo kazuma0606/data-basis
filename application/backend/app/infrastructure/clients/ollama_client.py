@@ -1,3 +1,5 @@
+from typing import cast
+
 import httpx
 
 from app.config import settings
@@ -17,7 +19,7 @@ class OllamaClient:
                 json={"model": _GENERATE_MODEL, "prompt": prompt, "stream": False},
             )
             resp.raise_for_status()
-            return resp.json()["response"]
+            return cast(str, resp.json()["response"])
 
     async def embed(self, text: str) -> list[float]:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -26,4 +28,4 @@ class OllamaClient:
                 json={"model": _EMBED_MODEL, "prompt": text},
             )
             resp.raise_for_status()
-            return resp.json()["embedding"]
+            return cast(list[float], resp.json()["embedding"])

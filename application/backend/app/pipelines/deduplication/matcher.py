@@ -66,6 +66,7 @@ def match(
     if name_match(new_name, existing_name) and birthdate_match(new_birthdate, existing_birthdate):
         # 年のみ補完（POSの和暦変換）の場合は信頼度を下げる
         from app.pipelines.cleansing.birthdate import normalize_birthdate
+
         a_bd = normalize_birthdate(new_birthdate)
         b_bd = normalize_birthdate(existing_birthdate)
         year_only = a_bd.year_only or b_bd.year_only

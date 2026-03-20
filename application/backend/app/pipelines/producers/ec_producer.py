@@ -59,21 +59,26 @@ def produce_orders(conn: sqlite3.Connection, producer) -> int:
 
 def produce_browse_events(conn: sqlite3.Connection, producer) -> int:
     rows = conn.execute(
-        "SELECT event_id, ec_user_id, session_id, ec_product_id, event_type, event_value, timestamp "
+        "SELECT event_id, ec_user_id, session_id, ec_product_id,"
+        " event_type, event_value, timestamp "
         "FROM ec_browsing_events"
     ).fetchall()
 
     for row in rows:
         event_id, uid, session_id, pid, event_type, event_value, ts = row
-        send(producer, TOPIC, {
-            "event_type": f"ec_browse_{event_type}",
-            "event_id": event_id,
-            "ec_user_id": uid,
-            "session_id": session_id,
-            "ec_product_id": pid,
-            "event_value": event_value,
-            "timestamp": ts,
-        })
+        send(
+            producer,
+            TOPIC,
+            {
+                "event_type": f"ec_browse_{event_type}",
+                "event_id": event_id,
+                "ec_user_id": uid,
+                "session_id": session_id,
+                "ec_product_id": pid,
+                "event_value": event_value,
+                "timestamp": ts,
+            },
+        )
 
     return len(rows)
 
