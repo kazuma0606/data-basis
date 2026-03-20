@@ -11,33 +11,33 @@
 
 ## フェーズ-1: 作業前スナップショット（必須）
 
-- [ ] **-1-1. スナップショット一覧を確認**
+- [x] **-1-1. スナップショット一覧を確認**
   ```bash
   cd infrastructure/vagrant/production
   vagrant snapshot list
   # → v1.2-stable が存在すること
   ```
 
-- [ ] **-1-2. 作業前スナップショットを保存**
+- [x] **-1-2. 作業前スナップショットを保存**
   ```bash
   vagrant snapshot save "pre-v1.2.1"
   vagrant snapshot list
   ```
 
 ### ✅ フェーズ-1 完了基準
-- [ ] `pre-v1.2.1` がスナップショット一覧に表示されること
+- [x] `pre-v1.2.1` がスナップショット一覧に表示されること
 
 ---
 
 ## フェーズ1: 計測ツールの準備
 
-- [ ] **1-1. metrics-server の動作確認**
+- [x] **1-1. metrics-server の動作確認**
   ```bash
   vagrant ssh -c "kubectl top nodes"
   # エラーが出る場合は 1-2 へ
   ```
 
-- [ ] **1-2. metrics-server が未インストールの場合のみ適用**
+- [x] **1-2. metrics-server が未インストールの場合のみ適用**
   ```bash
   vagrant ssh -c "
     kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
@@ -48,7 +48,7 @@
   "
   ```
 
-- [ ] **1-3. CSV 出力スクリプトの配置**
+- [x] **1-3. CSV 出力スクリプトの配置**
   - `infrastructure/scripts/measure_ram.sh` を作成（フェーズ2 で使用）
   - スクリプト内容は下記参照
 
@@ -83,7 +83,7 @@
   echo "[recorded] ${SCENARIO} → ${CSV}"
   ```
 
-- [ ] **1-4. Pod 別 CSV 出力スクリプトの配置**
+- [x] **1-4. Pod 別 CSV 出力スクリプトの配置**
   - `infrastructure/scripts/measure_pods.sh` を作成
 
   ```bash
@@ -110,9 +110,9 @@
   ```
 
 ### ✅ フェーズ1 完了基準
-- [ ] `kubectl top nodes` がエラーなく返ること
-- [ ] `kubectl top pods -n default` がエラーなく返ること
-- [ ] `measure_ram.sh` / `measure_pods.sh` が VM 上で実行できること
+- [x] `kubectl top nodes` がエラーなく返ること
+- [x] `kubectl top pods -n default` がエラーなく返ること
+- [x] `measure_ram.sh` / `measure_pods.sh` が VM 上で実行できること
 
 ---
 
@@ -125,19 +125,19 @@
 
 > 全サービス起動済み・バッチ未実行の状態。最も重要な基準値。
 
-- [ ] **A-1. 全 Pod が Running であることを確認**
+- [x] **A-1. 全 Pod が Running であることを確認**
   ```bash
   vagrant ssh -c "kubectl get pods -n default"
   # 全て Running / Completed であること
   ```
 
-- [ ] **A-2. ノード + ホスト RAM を CSV に記録**
+- [x] **A-2. ノード + ホスト RAM を CSV に記録**
   ```bash
   vagrant ssh -c "bash /vagrant/infrastructure/scripts/measure_ram.sh \
     'A_idle' '/vagrant/versions/v1.2.1/results_baseline.csv'"
   ```
 
-- [ ] **A-3. Pod 別 RAM を CSV に記録**
+- [x] **A-3. Pod 別 RAM を CSV に記録**
   ```bash
   vagrant ssh -c "bash /vagrant/infrastructure/scripts/measure_pods.sh \
     'A_idle' 'default' '/vagrant/versions/v1.2.1/results_pods.csv'"
@@ -147,7 +147,7 @@
 
 ### シナリオ B: API 並列リクエスト（10 並列）
 
-- [ ] **B-1. 10 並列リクエストを発行**
+- [x] **B-1. 10 並列リクエストを発行**
   ```bash
   for i in $(seq 1 10); do
     curl -s http://192.168.56.10:30300/api/healthz &
@@ -155,7 +155,7 @@
   wait
   ```
 
-- [ ] **B-2. リクエスト中に計測**
+- [x] **B-2. リクエスト中に計測**
   ```bash
   vagrant ssh -c "
     bash /vagrant/infrastructure/scripts/measure_ram.sh \
@@ -169,7 +169,7 @@
 
 ### シナリオ C: ClickHouse 分析クエリ
 
-- [ ] **C-1. 集計クエリを実行しながら計測**
+- [x] **C-1. 集計クエリを実行しながら計測**
   ```bash
   vagrant ssh -c "
     kubectl exec -n default deploy/clickhouse -- \
@@ -190,7 +190,7 @@
 
 ### シナリオ D: Ollama 推論
 
-- [ ] **D-1. 1 並列で計測**
+- [x] **D-1. 1 並列で計測**
   ```bash
   vagrant ssh -c "
     kubectl exec -n default deploy/ollama -- \
@@ -203,7 +203,7 @@
   "
   ```
 
-- [ ] **D-2. 3 並列で計測**
+- [x] **D-2. 3 並列で計測**
   ```bash
   vagrant ssh -c "
     for i in 1 2 3; do
@@ -222,7 +222,7 @@
 
 ### シナリオ E: スコアリングバッチ
 
-- [ ] **E-1. バッチを手動トリガーして計測**
+- [x] **E-1. バッチを手動トリガーして計測**
   ```bash
   vagrant ssh -c "
     kubectl create job --from=cronjob/scoring-batch \
@@ -239,7 +239,7 @@
 
 ### シナリオ F: pgvector 類似検索（Embedding）
 
-- [ ] **F-1. Embedding バッチ実行後に計測**
+- [x] **F-1. Embedding バッチ実行後に計測**
   ```bash
   vagrant ssh -c "
     bash /vagrant/infrastructure/scripts/measure_ram.sh \
@@ -255,7 +255,7 @@
 
 > B + C + D（3並列）+ E を同時実行する。
 
-- [ ] **G-1. 全負荷を同時発生させて計測**
+- [x] **G-1. 全負荷を同時発生させて計測**
   ```bash
   # ホスト側でAPIリクエスト（B）
   for i in $(seq 1 10); do curl -s http://192.168.56.10:30300/api/healthz & done
@@ -283,7 +283,7 @@
 
 ## フェーズ3: CSV 確認・サマリー作成
 
-- [ ] **3-1. CSV の内容を確認**
+- [x] **3-1. CSV の内容を確認**
   ```bash
   # ノード/ホスト計測結果
   cat versions/v1.2.1/results_baseline.csv
@@ -292,34 +292,34 @@
   cat versions/v1.2.1/results_pods.csv
   ```
 
-- [ ] **3-2. 最大値（ピーク）を確認**
+- [x] **3-2. 最大値（ピーク）を確認**
   ```bash
   # host_mem_used_gb が最大のシナリオを確認
   sort -t',' -k7 -rn versions/v1.2.1/results_baseline.csv | head -3
   ```
 
-- [ ] **3-3. サマリーを `versions/v1.2.1/summary.md` に記録**
+- [x] **3-3. サマリーを `versions/v1.2.1/summary.md` に記録**
   - 各シナリオのピーク値（host_mem_used_gb）を転記
   - v1.3.1 で使う「v1.2.1 ベースライン」の参照値を明記
   - 増加が目立つ Pod を特記
 
 ### ✅ フェーズ2〜3 完了基準
-- [ ] `results_baseline.csv` に A〜G 全シナリオの行が存在すること
-- [ ] `results_pods.csv` に A〜G 全シナリオ × 全 Pod の行が存在すること
-- [ ] `summary.md` にピーク値と v1.3.1 への引き継ぎ値が記載されていること
+- [x] `results_baseline.csv` に A〜G 全シナリオの行が存在すること
+- [x] `results_pods.csv` に A〜G 全シナリオ × 全 Pod の行が存在すること
+- [x] `summary.md` にピーク値と v1.3.1 への引き継ぎ値が記載されていること
 
 ---
 
 ## フェーズ4: スナップショット保存
 
-- [ ] **4-1. `v1.2.1-stable` スナップショットを保存**
+- [x] **4-1. `v1.2.1-stable` スナップショットを保存**
   ```bash
   cd infrastructure/vagrant/production
   vagrant snapshot save "v1.2.1-stable"
   vagrant snapshot list
   ```
 
-- [ ] **4-2. CSV ファイルを git にコミット**
+- [x] **4-2. CSV ファイルを git にコミット**
   ```bash
   git add versions/v1.2.1/results_baseline.csv \
           versions/v1.2.1/results_pods.csv \
@@ -342,8 +342,8 @@
 
 ## 作業メモ欄
 
-- 開始日:
-- 完了日:
+- 開始日: 2026-03-20
+- 完了日: 2026-03-20
 - 注記:
   - Vagrantfile の `vb.memory` 更新は **v1.3.1 で実施**（監視スタック込みの最終ピークが出てから）
   - 計測結果 CSV は v1.3.1 でも参照するため、フォーマットを統一しておくこと
