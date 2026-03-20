@@ -54,7 +54,7 @@
   git push
   ```
 
-- [ ] **0-4. GitGuardian 上で「This secret is revoked」を報告**（手動）
+- [-] **0-4. GitGuardian 上で「This secret is revoked」を報告**（不要：新規検出なし）
   - 自己署名鍵のため実際の revoke は不要
   - GitGuardian の UI から「Resolve」または「Won't fix」でクローズ
 
