@@ -17,7 +17,9 @@ _TEST_USERS: dict[str, UserRecord] = {
     "admin": UserRecord(1, "admin", _hash("admin123"), Role.ADMIN),
     "engineer": UserRecord(2, "engineer", _hash("engineer123"), Role.ENGINEER),
     "marketer": UserRecord(3, "marketer", _hash("marketer123"), Role.MARKETER),
-    "store_manager": UserRecord(4, "store_manager", _hash("manager123"), Role.STORE_MANAGER, store_id=1),
+    "store_manager": UserRecord(
+        4, "store_manager", _hash("manager123"), Role.STORE_MANAGER, store_id=1
+    ),
 }
 
 

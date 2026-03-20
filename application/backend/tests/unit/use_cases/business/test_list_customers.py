@@ -1,6 +1,3 @@
-from dataclasses import dataclass, field
-from datetime import date
-
 import pytest
 
 from app.domain.entities.customer import UnifiedCustomer
@@ -30,7 +27,7 @@ class FakeCustomerRepository:
         offset: int = 0,
         limit: int = 20,
     ) -> list[UnifiedCustomer]:
-        return self._all[offset: offset + limit]
+        return self._all[offset : offset + limit]
 
     async def find_by_id(self, unified_id: int) -> UnifiedCustomer | None:
         return next((c for c in self._all if c.unified_id == unified_id), None)

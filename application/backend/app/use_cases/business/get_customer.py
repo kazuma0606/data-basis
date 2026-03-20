@@ -15,7 +15,7 @@ def _cache_key(unified_id: int) -> str:
 
 def _to_json(customer: UnifiedCustomer) -> str:
     def _default(obj: object) -> str:
-        if isinstance(obj, (date, datetime)):
+        if isinstance(obj, date | datetime):
             return obj.isoformat()
         raise TypeError(f"Not serializable: {type(obj)}")
 

@@ -37,8 +37,7 @@ class FakeLLMClient:
 
 
 _PRODUCTS = [
-    ProductResult(i, f"Product {i}", "Brand", 1000, 1, 0.9 - i * 0.01)
-    for i in range(1, 6)
+    ProductResult(i, f"Product {i}", "Brand", 1000, 1, 0.9 - i * 0.01) for i in range(1, 6)
 ]
 
 

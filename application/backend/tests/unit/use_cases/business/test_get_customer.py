@@ -1,9 +1,10 @@
+from datetime import datetime
+
 import pytest
 
-from app.domain.entities.customer import ChurnLabel, CustomerScore, UnifiedCustomer
+from app.domain.entities.customer import ChurnLabel, UnifiedCustomer
 from app.domain.exceptions import NotFoundError
 from app.use_cases.business.get_customer import GetCustomerUseCase
-from datetime import datetime
 
 
 def _now() -> datetime:
@@ -55,8 +56,8 @@ async def test_raises_not_found_when_missing() -> None:
 
 async def test_cache_hit_skips_repo() -> None:
     """キャッシュにデータがある場合、リポジトリを呼ばない"""
+    from app.use_cases.business.get_customer import _cache_key, _to_json
     from tests.conftest import InMemoryCacheClient
-    from app.use_cases.business.get_customer import _to_json, _cache_key
 
     customer = UnifiedCustomer(1, "Cached User", None, None, None, None)
     cache = InMemoryCacheClient()
@@ -65,8 +66,10 @@ async def test_cache_hit_skips_repo() -> None:
     class NeverCallRepo:
         async def find_by_id(self, _: int) -> None:
             raise AssertionError("should not be called")
+
         async def find_all(self, **_) -> list:
             return []
+
         async def count(self, **_) -> int:
             return 0
 
@@ -77,8 +80,8 @@ async def test_cache_hit_skips_repo() -> None:
 
 async def test_cache_miss_fetches_from_repo_and_stores() -> None:
     """キャッシュミスの場合、リポジトリから取得してキャッシュに書き込む"""
-    from tests.conftest import InMemoryCacheClient
     from app.use_cases.business.get_customer import _cache_key
+    from tests.conftest import InMemoryCacheClient
 
     customer = UnifiedCustomer(2, "DB User", None, None, None, None)
     repo = FakeCustomerRepository(customer)

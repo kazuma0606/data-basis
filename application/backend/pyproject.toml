@@ -63,6 +63,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]  # テストの認証ヘッダー等は行長制限を緩和
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

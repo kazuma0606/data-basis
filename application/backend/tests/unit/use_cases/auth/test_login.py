@@ -1,6 +1,7 @@
+from unittest.mock import AsyncMock
+
 import bcrypt
 import pytest
-from unittest.mock import AsyncMock
 
 from app.domain.entities.user import UserRecord
 from app.domain.exceptions import UnauthorizedError
