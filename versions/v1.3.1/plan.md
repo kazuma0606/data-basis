@@ -1,4 +1,4 @@
-# v1.3.1 アップデート計画 — メモリ要件の最終計測・Vagrantfile 更新
+# v1.3.1 アップデート計画 — ログ集約（Loki）+ メモリ要件の最終計測・Vagrantfile 更新
 
 作成日: 2026-03-20（草案）
 前提: v1.3（監視・オブザーバビリティ）完了後に着手
@@ -18,26 +18,166 @@ vagrant snapshot save "pre-v1.3.1"
 
 ## 目的
 
-v1.2.1 で記録した「監視スタックなし」のベースライン RAM に対し、
-v1.3 の監視スタック（Prometheus / Grafana / Alertmanager / Pushgateway / 各 Exporter）が
-加わった状態での **最終ピーク RAM を計測し、Vagrantfile の `vb.memory` を適切な値に更新する**。
+2つのゴールを持つ。
 
-### 2段階計測の全体像
+1. **Grafana Loki の導入** — Fluent Bit（v1.1 で導入済み）のログ出力先を Loki に追加し、
+   Grafana からメトリクス・ログを一元的に参照できる状態にする。
+   ELK（Elasticsearch + Logstash + Kibana）と比較して RAM 消費が約 1/40 であり、
+   このプロジェクトの規模に適した選択肢。
+
+2. **最終ピーク RAM 計測 → Vagrantfile 更新** — v1.2.1 のベースラインに対し、
+   v1.3 監視スタック + Loki 込みの最終 RAM を計測し、`vb.memory` を適切な値に更新する。
+
+### 2段階計測の全体像（RAM 計測）
 
 | フェーズ | バージョン | 内容 |
 |---|---|---|
 | フェーズ1 | v1.2.1 | 監視スタックなし状態のベースライン記録 |
 | **フェーズ2（本 plan）** | **v1.3.1** | 監視スタック込みの最終ピーク計測 → Vagrantfile 更新 |
 
-### 監視スタックの追加 RAM 見込み
+### 追加 RAM 見込み（v1.3 + v1.3.1）
 
-| コンポーネント | 追加 RAM 見込み |
+| コンポーネント | 追加 RAM 見込み | 備考 |
+|---|---|---|
+| Prometheus（保存期間 15d / PVC 20Gi） | ~1GB | v1.3 |
+| Grafana | ~256MB | v1.3 |
+| Alertmanager + Pushgateway | ~256MB | v1.3 |
+| Exporter 群（6種） | ~512MB | v1.3 |
+| **Loki** | **~100MB** | v1.3.1 |
+| **合計** | **~2.1GB** | ELK なら ~4–6GB |
+
+---
+
+## Loki — ログ集約スタック
+
+### 設計方針
+
+```
+Fluent Bit（DaemonSet・v1.1 導入済み）
+  └─ output: loki プラグイン（追加設定のみ）
+        ↓
+Loki（monitoring namespace）
+        ↓
+Grafana（v1.3 導入済み・Loki を DataSource として追加）
+```
+
+ELK との比較で選定した理由：
+
+| 観点 | ELK | Loki |
+|---|---|---|
+| RAM | ~4–6GB（JVM） | ~100MB |
+| インデックス方式 | 全文検索インデックス | ラベルベース（PromQL と同思想） |
+| Grafana 統合 | 追加設定が必要 | ネイティブ DataSource |
+| Fluent Bit 連携 | Logstash or Beats | `fluent-bit-loki` プラグイン |
+| AWS 対応 | Amazon OpenSearch | CloudWatch Logs / Managed Grafana |
+
+### ログラベル設計
+
+Loki はラベルでログを分類する。このプロジェクトでは以下のラベルを付与する。
+
+```
+namespace   = default / monitoring
+app         = backend / frontend / kafka / postgresql / clickhouse / redis / ollama
+level       = info / warning / error
+```
+
+structlog（FastAPI）の JSON ログはそのまま Loki に取り込み、
+Grafana の LogQL でフィルタリングする。
+
+### k8s リソース構成
+
+```
+namespace: monitoring
+
+Deployment:
+  loki    50m CPU / 256Mi RAM（実測は ~100MB）
+  PVC:    10Gi（ログチャンク保存）
+```
+
+### AWS 移行時の対応
+
+| ローカル | AWS | 移行コスト |
+|---|---|---|
+| Loki | Amazon CloudWatch Logs | Fluent Bit の output を `cloudwatch_logs` に変更するだけ |
+| Grafana | Amazon Managed Grafana | Loki DataSource → CloudWatch DataSource に差し替え |
+
+---
+
+## Loki 実装手順
+
+### Step 1: Loki マニフェスト作成・適用
+
+`infrastructure/k8s/monitoring/loki/manifest.yaml` を作成。
+
+```yaml
+# 構成要素
+- ConfigMap: loki-config（保存期間・チャンクサイズ等）
+- PVC: loki-data（10Gi）
+- Deployment: loki
+- Service: loki（ClusterIP、ポート 3100）
+```
+
+主な設定値：
+
+```yaml
+# loki-config.yaml（抜粋）
+auth_enabled: false
+storage:
+  type: filesystem          # ローカル。AWS移行時は s3 に変更
+limits_config:
+  retention_period: 168h    # 7日（Prometheus の 15日より短くていい）
+```
+
+### Step 2: Fluent Bit の出力先に Loki を追加
+
+v1.1 で導入済みの Fluent Bit ConfigMap に Loki output を追加する。
+既存の出力（stdout 等）は残したまま追記する形で変更最小に保つ。
+
+```ini
+[OUTPUT]
+    Name        loki
+    Match       *
+    Host        loki.monitoring.svc.cluster.local
+    Port        3100
+    Labels      job=fluent-bit, namespace=$kubernetes['namespace_name'], app=$kubernetes['labels']['app']
+    Auto_Kubernetes_Labels on
+```
+
+### Step 3: Grafana に Loki DataSource を追加
+
+v1.3 で作成した Grafana のプロビジョニング設定に追記。
+
+```yaml
+# grafana/provisioning/datasources/loki.yaml
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    url: http://loki.monitoring.svc.cluster.local:3100
+    isDefault: false
+```
+
+### Step 4: Grafana でログ確認
+
+```
+Grafana → Explore → DataSource: Loki
+LogQL: {namespace="default", app="backend"} |= "ERROR"
+```
+
+確認ポイント：
+- FastAPI の structlog JSON ログが取り込まれていること
+- `level="error"` のフィルタが動作すること
+- Prometheus のメトリクスと時刻軸を合わせてログを参照できること（Grafana の "Correlate" 機能）
+
+### Step 5: Grafana にログダッシュボードを追加
+
+`infrastructure/k8s/monitoring/grafana/dashboards/logs.json` を作成。
+
+| パネル | LogQL |
 |---|---|
-| Prometheus（保存期間 15d / PVC 20Gi） | ~1GB |
-| Grafana | ~256MB |
-| Alertmanager + Pushgateway | ~256MB |
-| Exporter 群（kafka / postgres / clickhouse / redis / kube-state-metrics / node-exporter） | ~512MB |
-| **合計** | **~2GB** |
+| エラーログ一覧（直近 1h） | `{namespace="default"} \|= "error"` |
+| サービス別ログ量推移 | `sum by (app) (rate({namespace="default"}[5m]))` |
+| バッチジョブ完了ログ | `{app="backend"} \|= "job_completed"` |
 
 ---
 
@@ -164,7 +304,7 @@ vagrant ssh -c "
 - VM RAM: 48GB allocated
 - k3s version: X.X.X
 - Ollama models: qwen2.5:3b, nomic-embed-text
-- 監視スタック: Prometheus / Grafana / Alertmanager / Pushgateway / 各 Exporter
+- 監視スタック: Prometheus / Grafana / Alertmanager / Pushgateway / 各 Exporter / Loki
 
 ## シナリオ別ピーク RAM（VM ホスト視点）
 
@@ -193,6 +333,7 @@ vagrant ssh -c "
 | redis-exporter | | |
 | kube-state-metrics | | |
 | node-exporter | | |
+| loki | | |
 
 ## 推奨 RAM 値（最終決定）
 
@@ -250,10 +391,23 @@ vagrant snapshot save "v1.3.1-stable"
 
 ## 完了基準
 
+### Loki
+
+| 確認項目 | 確認方法 |
+|---|---|
+| Loki Pod が Running であること | `kubectl get pods -n monitoring -l app=loki` |
+| Fluent Bit がログを Loki に送信していること | Loki の `/ready` エンドポイントが OK |
+| Grafana で Loki DataSource が認識されていること | Grafana → Configuration → Data Sources |
+| LogQL `{namespace="default"}` でログが返ること | Grafana → Explore → Loki |
+| エラーログフィルタが動作すること | `{namespace="default"} \|= "error"` |
+| ログダッシュボードが表示されること | Grafana ダッシュボード一覧 |
+
+### RAM 計測・Vagrantfile
+
 | 確認項目 | 確認方法 |
 |---|---|
 | 全シナリオの計測値が記録されていること | `versions/v1.3.1/results.md` に数値あり |
-| v1.2.1 との差分（監視スタック増加分）が記録されていること | results.md の「v1.2.1 比 増分」列 |
+| v1.2.1 との差分（監視スタック + Loki 増加分）が記録されていること | results.md の「v1.2.1 比 増分」列 |
 | 推奨 RAM 値が決定されていること | results.md の「推奨 RAM 値」セクション |
 | Vagrantfile が更新されていること | `git diff infrastructure/vagrant/production/Vagrantfile` |
 | `vagrant reload` 後に全 Pod が正常起動すること | `kubectl get pods -n default && kubectl get pods -n monitoring` |
