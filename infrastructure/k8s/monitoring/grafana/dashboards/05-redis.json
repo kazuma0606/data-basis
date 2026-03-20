@@ -1,0 +1,78 @@
+{
+  "title": "Redis",
+  "uid": "redis",
+  "schemaVersion": 38,
+  "tags": ["technomart", "redis"],
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Cache Hit 率",
+      "type": "gauge",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]) + 0.001) * 100",
+        "legendFormat": "Hit Rate %"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}]}}}
+    },
+    {
+      "id": 2,
+      "title": "メモリ使用量",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "redis_memory_used_bytes",
+        "legendFormat": "Used Memory"
+      }],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 3,
+      "title": "接続クライアント数",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "targets": [{
+        "expr": "redis_connected_clients",
+        "legendFormat": "Clients"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "Evictions 数",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [{
+        "expr": "rate(redis_evicted_keys_total[5m])",
+        "legendFormat": "Evictions/s"
+      }],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+    },
+    {
+      "id": 5,
+      "title": "コマンド処理数推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{
+        "expr": "rate(redis_commands_processed_total[5m])",
+        "legendFormat": "Commands/s"
+      }],
+      "fieldConfig": {"defaults": {"unit": "ops"}}
+    },
+    {
+      "id": 6,
+      "title": "メモリ使用量推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{
+        "expr": "redis_memory_used_bytes",
+        "legendFormat": "Used"
+      }, {
+        "expr": "redis_memory_max_bytes",
+        "legendFormat": "Max"
+      }],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    }
+  ]
+}

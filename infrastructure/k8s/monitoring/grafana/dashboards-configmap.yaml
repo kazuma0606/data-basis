@@ -1,0 +1,467 @@
+# Auto-generated from dashboards/*.json
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: monitoring
+data:
+  01-cluster-overview.json: |
+    {
+      "title": "クラスター概要",
+      "uid": "cluster-overview",
+      "schemaVersion": 38,
+      "tags": ["technomart", "infra"],
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Pod 状態 (technomart)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase=\"Running\"})",
+            "legendFormat": "Running"
+          }],
+          "options": {"colorMode": "background"}
+        },
+        {
+          "id": 2,
+          "title": "Pod 異常 (Not Running)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{
+            "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase!=\"Running\", phase!=\"Succeeded\"})",
+            "legendFormat": "Not Running"
+          }],
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+          "options": {"colorMode": "background"}
+        },
+        {
+          "id": 3,
+          "title": "ノード CPU 使用率",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [{
+            "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 90}]}}}
+        },
+        {
+          "id": 4,
+          "title": "ノードメモリ使用率",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [{
+            "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+            "legendFormat": "Memory %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}}}
+        },
+        {
+          "id": 5,
+          "title": "ディスク使用率",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "100 * (1 - node_filesystem_free_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})",
+            "legendFormat": "Disk %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}}}
+        },
+        {
+          "id": 6,
+          "title": "Pod メモリ使用量 (Top 10)",
+          "type": "table",
+          "gridPos": {"h": 8, "w": 18, "x": 6, "y": 4},
+          "targets": [{
+            "expr": "topk(10, container_memory_working_set_bytes{namespace=\"technomart\", container!=\"\"})",
+            "legendFormat": "{{pod}} / {{container}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        },
+        {
+          "id": 7,
+          "title": "CPU 使用量推移 (全 Pod)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+          "targets": [{
+            "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"technomart\", container!=\"\"}[5m]))",
+            "legendFormat": "{{pod}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        }
+      ]
+    }
+  02-kafka-pipeline.json: |
+    {
+      "title": "Kafka パイプライン",
+      "uid": "kafka-pipeline",
+      "schemaVersion": 38,
+      "tags": ["technomart", "kafka"],
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Consumer Lag (全グループ)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "sum(kafka_consumer_group_lag)",
+            "legendFormat": "Total Lag"
+          }],
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1000}, {"color": "red", "value": 10000}]}}}
+        },
+        {
+          "id": 2,
+          "title": "トピック数",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+          "targets": [{
+            "expr": "count(kafka_topic_partitions)",
+            "legendFormat": "Topics"
+          }]
+        },
+        {
+          "id": 3,
+          "title": "Consumer Lag 推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "kafka_consumer_group_lag",
+            "legendFormat": "{{consumergroup}} / {{topic}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        },
+        {
+          "id": 4,
+          "title": "Topic Offset 推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+          "targets": [{
+            "expr": "rate(kafka_topic_partition_current_offset[5m])",
+            "legendFormat": "{{topic}} / partition {{partition}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        }
+      ]
+    }
+  03-postgresql.json: |
+    {
+      "title": "PostgreSQL",
+      "uid": "postgresql",
+      "schemaVersion": 38,
+      "tags": ["technomart", "postgresql"],
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "接続数",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "pg_stat_activity_count{datname=\"technomart\"}",
+            "legendFormat": "Active Connections"
+          }]
+        },
+        {
+          "id": 2,
+          "title": "PostgreSQL 死活",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{
+            "expr": "pg_up",
+            "legendFormat": "Up"
+          }],
+          "fieldConfig": {"defaults": {"mappings": [{"type": "value", "options": {"0": {"text": "DOWN", "color": "red"}, "1": {"text": "UP", "color": "green"}}}]}}
+        },
+        {
+          "id": 3,
+          "title": "トランザクション数 (TPS)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [{
+            "expr": "rate(pg_stat_database_xact_commit{datname=\"technomart\"}[5m]) + rate(pg_stat_database_xact_rollback{datname=\"technomart\"}[5m])",
+            "legendFormat": "TPS"
+          }],
+          "fieldConfig": {"defaults": {"unit": "reqps"}}
+        },
+        {
+          "id": 4,
+          "title": "Cache Hit 率",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [{
+            "expr": "rate(pg_stat_database_blks_hit{datname=\"technomart\"}[5m]) / (rate(pg_stat_database_blks_hit{datname=\"technomart\"}[5m]) + rate(pg_stat_database_blks_read{datname=\"technomart\"}[5m]) + 0.001) * 100",
+            "legendFormat": "Cache Hit %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100}}
+        },
+        {
+          "id": 5,
+          "title": "接続数推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "pg_stat_activity_count",
+            "legendFormat": "{{datname}} ({{state}})"
+          }]
+        },
+        {
+          "id": 6,
+          "title": "DB サイズ",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 4},
+          "targets": [{
+            "expr": "pg_database_size_bytes{datname=\"technomart\"}",
+            "legendFormat": "DB Size"
+          }],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        }
+      ]
+    }
+  04-batch-jobs.json: |
+    {
+      "title": "バッチジョブ実行状況",
+      "uid": "batch-jobs",
+      "schemaVersion": 38,
+      "tags": ["technomart", "batch"],
+      "refresh": "60s",
+      "time": {"from": "now-24h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "スコアリングバッチ 最終成功",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "time() - job_last_success_timestamp{job=\"scoring_batch\"}",
+            "legendFormat": "経過時間 (秒)"
+          }],
+          "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 86400}, {"color": "red", "value": 90000}]}}}
+        },
+        {
+          "id": 2,
+          "title": "名寄せバッチ 最終成功",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+          "targets": [{
+            "expr": "time() - job_last_success_timestamp{job=\"deduplication_batch\"}",
+            "legendFormat": "経過時間 (秒)"
+          }],
+          "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 86400}, {"color": "red", "value": 90000}]}}}
+        },
+        {
+          "id": 3,
+          "title": "Embedding バッチ 最終成功",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 8, "x": 16, "y": 0},
+          "targets": [{
+            "expr": "time() - job_last_success_timestamp{job=\"embedding_batch\"}",
+            "legendFormat": "経過時間 (秒)"
+          }],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "id": 4,
+          "title": "バッチ実行時間推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "job_duration_seconds",
+            "legendFormat": "{{job}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "id": 5,
+          "title": "処理レコード数推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+          "targets": [{
+            "expr": "job_records_processed",
+            "legendFormat": "{{job}}"
+          }],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        },
+        {
+          "id": 6,
+          "title": "k8s CronJob 直近実行状況",
+          "type": "table",
+          "gridPos": {"h": 6, "w": 24, "x": 0, "y": 20},
+          "targets": [{
+            "expr": "kube_job_status_succeeded{namespace=\"technomart\"}",
+            "legendFormat": "{{job_name}}"
+          }]
+        }
+      ]
+    }
+  05-redis.json: |
+    {
+      "title": "Redis",
+      "uid": "redis",
+      "schemaVersion": 38,
+      "tags": ["technomart", "redis"],
+      "refresh": "30s",
+      "time": {"from": "now-1h", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Cache Hit 率",
+          "type": "gauge",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]) + 0.001) * 100",
+            "legendFormat": "Hit Rate %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 70}, {"color": "green", "value": 90}]}}}
+        },
+        {
+          "id": 2,
+          "title": "メモリ使用量",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [{
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Used Memory"
+          }],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        },
+        {
+          "id": 3,
+          "title": "接続クライアント数",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [{
+            "expr": "redis_connected_clients",
+            "legendFormat": "Clients"
+          }]
+        },
+        {
+          "id": 4,
+          "title": "Evictions 数",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [{
+            "expr": "rate(redis_evicted_keys_total[5m])",
+            "legendFormat": "Evictions/s"
+          }],
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}}
+        },
+        {
+          "id": 5,
+          "title": "コマンド処理数推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [{
+            "expr": "rate(redis_commands_processed_total[5m])",
+            "legendFormat": "Commands/s"
+          }],
+          "fieldConfig": {"defaults": {"unit": "ops"}}
+        },
+        {
+          "id": 6,
+          "title": "メモリ使用量推移",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [{
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Used"
+          }, {
+            "expr": "redis_memory_max_bytes",
+            "legendFormat": "Max"
+          }],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        }
+      ]
+    }
+  06-slo.json: |
+    {
+      "title": "SLI / SLO ダッシュボード",
+      "uid": "slo-dashboard",
+      "schemaVersion": 38,
+      "tags": ["technomart", "slo"],
+      "refresh": "5m",
+      "time": {"from": "now-30d", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "Backend API 可用性 SLO (目標: 99.5%)",
+          "type": "gauge",
+          "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+          "targets": [{
+            "expr": "avg_over_time(up{job=\"backend\"}[30d]) * 100",
+            "legendFormat": "可用性 %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 99}, {"color": "green", "value": 99.5}]}}}
+        },
+        {
+          "id": 2,
+          "title": "API p99 応答時間 SLO (目標: < 2s)",
+          "type": "gauge",
+          "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+          "targets": [{
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m]))",
+            "legendFormat": "p99 latency"
+          }],
+          "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1}, {"color": "red", "value": 2}]}}}
+        },
+        {
+          "id": 3,
+          "title": "Kafka Consumer Lag SLO (目標: < 10,000)",
+          "type": "gauge",
+          "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+          "targets": [{
+            "expr": "sum(kafka_consumer_group_lag)",
+            "legendFormat": "Total Lag"
+          }],
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 5000}, {"color": "red", "value": 10000}]}}}
+        },
+        {
+          "id": 4,
+          "title": "スコアリングバッチ成功率 SLO (目標: 99%)",
+          "type": "stat",
+          "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+          "targets": [{
+            "expr": "(1 - (time() - job_last_success_timestamp{job=\"scoring_batch\"}) / 90000) * 100",
+            "legendFormat": "Batch Health %"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percent"}}
+        },
+        {
+          "id": 5,
+          "title": "API エラーバジェット消化率 (30d)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+          "targets": [{
+            "expr": "1 - avg_over_time(up{job=\"backend\"}[30d])",
+            "legendFormat": "Error Budget Burn Rate"
+          }],
+          "fieldConfig": {"defaults": {"unit": "percentunit"}}
+        },
+        {
+          "id": 6,
+          "title": "API レスポンス時間分布 (p50 / p95 / p99)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m]))",
+              "legendFormat": "p50"
+            },
+            {
+              "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m]))",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m]))",
+              "legendFormat": "p99"
+            }
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        }
+      ]
+    }

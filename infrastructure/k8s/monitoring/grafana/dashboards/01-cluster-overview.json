@@ -1,0 +1,88 @@
+{
+  "title": "クラスター概要",
+  "uid": "cluster-overview",
+  "schemaVersion": 38,
+  "tags": ["technomart", "infra"],
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Pod 状態 (technomart)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase=\"Running\"})",
+        "legendFormat": "Running"
+      }],
+      "options": {"colorMode": "background"}
+    },
+    {
+      "id": 2,
+      "title": "Pod 異常 (Not Running)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "targets": [{
+        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase!=\"Running\", phase!=\"Succeeded\"})",
+        "legendFormat": "Not Running"
+      }],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
+      "options": {"colorMode": "background"}
+    },
+    {
+      "id": 3,
+      "title": "ノード CPU 使用率",
+      "type": "gauge",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "targets": [{
+        "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+        "legendFormat": "CPU %"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 90}]}}}
+    },
+    {
+      "id": 4,
+      "title": "ノードメモリ使用率",
+      "type": "gauge",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [{
+        "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+        "legendFormat": "Memory %"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}}}
+    },
+    {
+      "id": 5,
+      "title": "ディスク使用率",
+      "type": "gauge",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 4},
+      "targets": [{
+        "expr": "100 * (1 - node_filesystem_free_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"})",
+        "legendFormat": "Disk %"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 70}, {"color": "red", "value": 85}]}}}
+    },
+    {
+      "id": 6,
+      "title": "Pod メモリ使用量 (Top 10)",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 18, "x": 6, "y": 4},
+      "targets": [{
+        "expr": "topk(10, container_memory_working_set_bytes{namespace=\"technomart\", container!=\"\"})",
+        "legendFormat": "{{pod}} / {{container}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "bytes"}}
+    },
+    {
+      "id": 7,
+      "title": "CPU 使用量推移 (全 Pod)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "targets": [{
+        "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"technomart\", container!=\"\"}[5m]))",
+        "legendFormat": "{{pod}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    }
+  ]
+}
