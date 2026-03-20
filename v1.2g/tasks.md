@@ -33,34 +33,34 @@
 > GitGuardian が検出した `infrastructure/k8s/ingress/tls.key` の除外。
 > 自己署名鍵のため実害はないが、パターンとして残してはいけない。
 
-- [ ] **0-1. .gitignore に TLS ファイルを追加**
+- [x] **0-1. .gitignore に TLS ファイルを追加**
   ```
   # 追加する行（infrastructure/k8s/ingress/ 配下の証明書・鍵）
   infrastructure/k8s/ingress/*.key
   infrastructure/k8s/ingress/*.crt
   ```
 
-- [ ] **0-2. git の追跡から除外**
+- [x] **0-2. git の追跡から除外**
   ```bash
   git rm --cached infrastructure/k8s/ingress/tls.key
   git rm --cached infrastructure/k8s/ingress/tls.crt 2>/dev/null || true
   ```
   - ファイル自体は削除しない（VM で使用中）
 
-- [ ] **0-3. commit & push**
+- [x] **0-3. commit & push**
   ```bash
   git add .gitignore
   git commit -m "security: Remove TLS private key from git tracking"
   git push
   ```
 
-- [ ] **0-4. GitGuardian 上で「This secret is revoked」を報告**
+- [ ] **0-4. GitGuardian 上で「This secret is revoked」を報告**（手動）
   - 自己署名鍵のため実際の revoke は不要
   - GitGuardian の UI から「Resolve」または「Won't fix」でクローズ
 
 ### ✅ フェーズ0 完了基準
-- [ ] `git ls-files infrastructure/k8s/ingress/` に `tls.key` が表示されないこと
-- [ ] `tls.key` ファイル自体は VM のファイルシステムに残存していること
+- [x] `git ls-files infrastructure/k8s/ingress/` に `tls.key` が表示されないこと
+- [x] `tls.key` ファイル自体は VM のファイルシステムに残存していること
 
 ---
 
@@ -289,6 +289,8 @@
 
 ## 作業メモ欄
 
-- 開始日:
+- 開始日: 2026-03-20
 - 完了日:
 - 注記:
+  - フェーズ0: tls.key / tls.crt を git rm --cached で除外。VM 上のファイルは残存（Ingress で使用中）
+  - 0-4 の GitGuardian クローズは手動対応（ブラウザから「Resolve」または「Won't fix」）
