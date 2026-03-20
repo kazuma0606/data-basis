@@ -1,0 +1,40 @@
+---
+# ClickHouse 24.8 組み込み Prometheus エンドポイントを有効化する
+# /etc/clickhouse-server/config.d/prometheus.xml をマウントして port 9363 を開放する
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clickhouse-prometheus-config
+  namespace: technomart
+data:
+  prometheus.xml: |
+    <clickhouse>
+        <http_handlers>
+            <!-- デフォルトの /ping ハンドラを維持（Readiness Probe 用） -->
+            <rule>
+                <url>/ping</url>
+                <methods>GET</methods>
+                <handler>
+                    <type>ping</type>
+                </handler>
+            </rule>
+            <!-- Prometheus メトリクスエンドポイント -->
+            <rule>
+                <url>/metrics</url>
+                <methods>GET</methods>
+                <handler>
+                    <type>prometheus</type>
+                    <metrics>true</metrics>
+                    <events>true</events>
+                    <asynchronous_metrics>true</asynchronous_metrics>
+                </handler>
+            </rule>
+            <!-- その他のリクエストはデフォルト処理 -->
+            <rule>
+                <handler>
+                    <type>dynamic_query_handler</type>
+                    <query_param_name>query</query_param_name>
+                </handler>
+            </rule>
+        </http_handlers>
+    </clickhouse>
