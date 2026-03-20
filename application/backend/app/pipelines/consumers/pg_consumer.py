@@ -21,7 +21,7 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime
 
 from kafka import KafkaConsumer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -63,6 +63,7 @@ def _to_dt(v) -> datetime | None:
     except (TypeError, ValueError):
         return None
 
+
 TOPICS = ["ec.events", "pos.transactions", "app.behaviors"]
 GROUP_ID = "pg-writer"
 CONSUMER_TIMEOUT_MS = 10000
@@ -70,10 +71,12 @@ CONSUMER_TIMEOUT_MS = 10000
 
 # ── PostgreSQL 書き込み ────────────────────────────────────────
 
+
 async def write_ec_events(session: AsyncSession, records: list[dict]) -> int:
     if not records:
         return 0
     from sqlalchemy import text
+
     await session.execute(
         text("""
             CREATE TABLE IF NOT EXISTS staging_ec_events (
@@ -126,6 +129,7 @@ async def write_pos_transactions(session: AsyncSession, records: list[dict]) -> 
     if not records:
         return 0
     from sqlalchemy import text
+
     await session.execute(
         text("""
             CREATE TABLE IF NOT EXISTS staging_pos_transactions (
@@ -174,6 +178,7 @@ async def write_app_behaviors(session: AsyncSession, records: list[dict]) -> int
     if not records:
         return 0
     from sqlalchemy import text
+
     await session.execute(
         text("""
             CREATE TABLE IF NOT EXISTS staging_app_behaviors (
@@ -217,8 +222,12 @@ async def flush_to_pg(buffer: dict[str, list[dict]]) -> dict[str, int]:
 
     async with factory() as session:
         counts["ec.events"] = await write_ec_events(session, buffer.get("ec.events", []))
-        counts["pos.transactions"] = await write_pos_transactions(session, buffer.get("pos.transactions", []))
-        counts["app.behaviors"] = await write_app_behaviors(session, buffer.get("app.behaviors", []))
+        counts["pos.transactions"] = await write_pos_transactions(
+            session, buffer.get("pos.transactions", [])
+        )
+        counts["app.behaviors"] = await write_app_behaviors(
+            session, buffer.get("app.behaviors", [])
+        )
         await session.commit()
 
     await engine.dispose()
@@ -226,6 +235,7 @@ async def flush_to_pg(buffer: dict[str, list[dict]]) -> dict[str, int]:
 
 
 # ── メイン ────────────────────────────────────────────────────
+
 
 def main() -> None:
     consumer = KafkaConsumer(

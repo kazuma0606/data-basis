@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 import structlog
 
@@ -20,4 +21,4 @@ def configure_logging(log_level: int = logging.INFO) -> None:
 
 
 def get_logger(name: str) -> structlog.BoundLogger:
-    return structlog.get_logger(name)
+    return cast(structlog.BoundLogger, structlog.get_logger(name))

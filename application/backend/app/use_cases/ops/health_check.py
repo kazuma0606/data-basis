@@ -28,8 +28,6 @@ class HealthCheckUseCase:
             except Exception as e:
                 return ServiceHealth(name=name, status="error", error=str(e)[:200])
 
-        results = list(
-            await asyncio.gather(*[run(n, c) for n, c in self._checkers.items()])
-        )
+        results = list(await asyncio.gather(*[run(n, c) for n, c in self._checkers.items()]))
         overall = "ok" if all(s.status == "ok" for s in results) else "degraded"
         return HealthCheckResult(overall=overall, services=results)

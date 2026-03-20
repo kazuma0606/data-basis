@@ -10,7 +10,6 @@
 """
 
 import re
-import unicodedata
 
 _KANJI_PATTERN = re.compile(r"[\u4e00-\u9fff\u3400-\u4dbf]")
 _KANA_ONLY_PATTERN = re.compile(r"^[\u30A0-\u30FF\u3040-\u309F\s　]+$")

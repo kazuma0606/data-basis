@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.entities.customer import ChurnLabel, CustomerScore, UnifiedCustomer
 from app.infrastructure.database.models import (
     ChurnLabelModel,
-    CustomerIdMapModel,
     CustomerScoreModel,
     UnifiedCustomerModel,
 )
@@ -31,10 +30,11 @@ class PostgresCustomerRepository:
     ) -> list[UnifiedCustomer]:
         stmt = select(UnifiedCustomerModel)
         if store_id is not None:
-            # store_id でフィルタ: customer_id_map から pos source_id の store 情報は直接持たないため
-            # 簡易実装として unified_id のサブセットを CustomerIdMap 経由で絞る
+            # store_id でフィルタ: customer_id_map から pos source_id の store 情報は
+            # 直接持たないため、簡易実装として unified_id のサブセットを CustomerIdMap 経由で絞る
             # 実際の本番では pos_transactions.store_id を JOIN するが、ここでは省略
-            stmt = stmt  # store_id フィルタはスコープ外のため全件取得でよい（ビジネスロジック側でフィルタ）
+            # store_id フィルタはスコープ外のため全件取得でよい（ビジネスロジック側でフィルタ）
+            stmt = stmt
         stmt = stmt.offset(offset).limit(limit)
         result = await self._db.execute(stmt)
         rows = result.scalars().all()
@@ -46,7 +46,7 @@ class PostgresCustomerRepository:
     async def count(self, store_id: int | None = None) -> int:
         stmt = select(func.count()).select_from(UnifiedCustomerModel)
         result = await self._db.execute(stmt)
-        return result.scalar_one()
+        return int(result.scalar_one())
 
     async def _enrich(self, row: UnifiedCustomerModel) -> UnifiedCustomer:
         """チャーンラベルとスコアを JOIN して返す"""

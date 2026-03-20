@@ -11,7 +11,7 @@ ECシステムは西暦 YYYY-MM-DD で保存する。
 from __future__ import annotations
 
 import re
-from datetime import date, datetime
+from datetime import date
 from typing import NamedTuple
 
 _ERA_OFFSETS = {

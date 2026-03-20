@@ -13,9 +13,9 @@ from app.dependencies import (
 from app.domain.entities.customer import ChurnLabel, CustomerScore, UnifiedCustomer
 from app.interfaces.repositories.analytics_repository import (
     CategoryAffinity,
+    SalesByChannel,
     SegmentCount,
     SegmentTrend,
-    SalesByChannel,
 )
 from app.interfaces.repositories.product_repository import ProductResult
 from app.main import app
@@ -52,7 +52,7 @@ class FakeCustomerRepository:
         return next((c for c in _CUSTOMERS if c.unified_id == unified_id), None)
 
     async def find_all(self, store_id=None, offset=0, limit=20) -> list[UnifiedCustomer]:
-        return _CUSTOMERS[offset: offset + limit]
+        return _CUSTOMERS[offset : offset + limit]
 
     async def count(self, store_id=None) -> int:
         return len(_CUSTOMERS)
@@ -60,7 +60,11 @@ class FakeCustomerRepository:
 
 class FakeAnalyticsRepository:
     async def get_segment_counts(self) -> list[SegmentCount]:
-        return [SegmentCount("active", 100), SegmentCount("dormant", 50), SegmentCount("churned", 20)]
+        return [
+            SegmentCount("active", 100),
+            SegmentCount("dormant", 50),
+            SegmentCount("churned", 20),
+        ]
 
     async def get_segment_trend(self, weeks: int = 12) -> list[SegmentTrend]:
         return [SegmentTrend(_TODAY, "active", 100, 30.0)]
@@ -68,7 +72,9 @@ class FakeAnalyticsRepository:
     async def get_sales_by_channel(self, days: int = 30, store_id=None) -> list[SalesByChannel]:
         return [SalesByChannel(_TODAY, "ec", None, 1, 500000, 100, 80)]
 
-    async def get_category_affinity(self, weeks: int = 4, category_id=None) -> list[CategoryAffinity]:
+    async def get_category_affinity(
+        self, weeks: int = 4, category_id=None
+    ) -> list[CategoryAffinity]:
         return [CategoryAffinity(_TODAY, 1, "30s", "female", 75.5, 120)]
 
     async def get_weekly_revenue(self, weeks: int = 1) -> int:
@@ -118,37 +124,52 @@ def marketer_client() -> TestClient:
 
 @pytest.fixture
 def marketer_token(marketer_client: TestClient) -> str:
-    resp = marketer_client.post("/auth/login", json={"username": "marketer", "password": "marketer123"})
+    resp = marketer_client.post(
+        "/auth/login", json={"username": "marketer", "password": "marketer123"}
+    )
     return resp.json()["access_token"]
 
 
 @pytest.fixture
 def engineer_token(marketer_client: TestClient) -> str:
-    resp = marketer_client.post("/auth/login", json={"username": "engineer", "password": "engineer123"})
+    resp = marketer_client.post(
+        "/auth/login", json={"username": "engineer", "password": "engineer123"}
+    )
     return resp.json()["access_token"]
 
 
 # ── ロールアクセス制御 ─────────────────────────────────────────
 
-@pytest.mark.parametrize("path", [
-    "/business/summary",
-    "/business/customers",
-    "/business/segments/summary",
-    "/business/segments/trend",
-    "/business/analytics/sales",
-    "/business/analytics/affinity",
-])
-def test_marketer_can_access_business(marketer_client: TestClient, marketer_token: str, path: str) -> None:
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/business/summary",
+        "/business/customers",
+        "/business/segments/summary",
+        "/business/segments/trend",
+        "/business/analytics/sales",
+        "/business/analytics/affinity",
+    ],
+)
+def test_marketer_can_access_business(
+    marketer_client: TestClient, marketer_token: str, path: str
+) -> None:
     resp = marketer_client.get(path, headers={"Authorization": f"Bearer {marketer_token}"})
     assert resp.status_code == 200
 
 
-@pytest.mark.parametrize("path", [
-    "/business/summary",
-    "/business/customers",
-    "/business/segments/summary",
-])
-def test_engineer_cannot_access_business(marketer_client: TestClient, engineer_token: str, path: str) -> None:
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/business/summary",
+        "/business/customers",
+        "/business/segments/summary",
+    ],
+)
+def test_engineer_cannot_access_business(
+    marketer_client: TestClient, engineer_token: str, path: str
+) -> None:
     resp = marketer_client.get(path, headers={"Authorization": f"Bearer {engineer_token}"})
     assert resp.status_code == 403
 
@@ -160,8 +181,11 @@ def test_unauthenticated_is_401(marketer_client: TestClient) -> None:
 
 # ── レスポンス内容の確認 ───────────────────────────────────────
 
+
 def test_summary_structure(marketer_client: TestClient, marketer_token: str) -> None:
-    resp = marketer_client.get("/business/summary", headers={"Authorization": f"Bearer {marketer_token}"})
+    resp = marketer_client.get(
+        "/business/summary", headers={"Authorization": f"Bearer {marketer_token}"}
+    )
     data = resp.json()
     assert "active_customers" in data
     assert "churn_rate" in data
@@ -171,7 +195,9 @@ def test_summary_structure(marketer_client: TestClient, marketer_token: str) -> 
 
 
 def test_customer_list_structure(marketer_client: TestClient, marketer_token: str) -> None:
-    resp = marketer_client.get("/business/customers", headers={"Authorization": f"Bearer {marketer_token}"})
+    resp = marketer_client.get(
+        "/business/customers", headers={"Authorization": f"Bearer {marketer_token}"}
+    )
     data = resp.json()
     assert "items" in data
     assert "total" in data
@@ -181,7 +207,9 @@ def test_customer_list_structure(marketer_client: TestClient, marketer_token: st
 
 
 def test_customer_detail_structure(marketer_client: TestClient, marketer_token: str) -> None:
-    resp = marketer_client.get("/business/customers/1", headers={"Authorization": f"Bearer {marketer_token}"})
+    resp = marketer_client.get(
+        "/business/customers/1", headers={"Authorization": f"Bearer {marketer_token}"}
+    )
     data = resp.json()
     assert data["unified_id"] == 1
     assert data["churn_label"]["label"] == "active"
@@ -189,7 +217,9 @@ def test_customer_detail_structure(marketer_client: TestClient, marketer_token: 
 
 
 def test_customer_not_found_returns_404(marketer_client: TestClient, marketer_token: str) -> None:
-    resp = marketer_client.get("/business/customers/9999", headers={"Authorization": f"Bearer {marketer_token}"})
+    resp = marketer_client.get(
+        "/business/customers/9999", headers={"Authorization": f"Bearer {marketer_token}"}
+    )
     assert resp.status_code == 404
 
 
@@ -206,7 +236,9 @@ def test_recommendations_structure(marketer_client: TestClient, marketer_token: 
 
 
 def test_segment_summary_structure(marketer_client: TestClient, marketer_token: str) -> None:
-    resp = marketer_client.get("/business/segments/summary", headers={"Authorization": f"Bearer {marketer_token}"})
+    resp = marketer_client.get(
+        "/business/segments/summary", headers={"Authorization": f"Bearer {marketer_token}"}
+    )
     items = resp.json()
     assert len(items) == 3
     labels = {i["label"] for i in items}

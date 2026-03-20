@@ -1,5 +1,4 @@
 from datetime import datetime
-from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,9 +13,10 @@ from app.interfaces.clients.kafka_client import KafkaConsumerGroup, KafkaTopic
 from app.interfaces.repositories.job_repository import PipelineJob, ScoringBatch
 from app.interfaces.repositories.schema_repository import ColumnInfo, TableSchema
 from app.main import app
-from app.use_cases.ops.health_check import HealthCheckResult, HealthCheckUseCase, ServiceHealth
+from app.use_cases.ops.health_check import HealthCheckUseCase
 
 _NOW = datetime(2026, 3, 16, 0, 0, 0)
+
 
 # ── Fake 実装 ─────────────────────────────────────────────
 class FakeKafkaClient:
@@ -46,7 +46,10 @@ class FakeSchemaRepository:
 def _fake_health_use_case() -> HealthCheckUseCase:
     async def _ok() -> None:
         pass
-    return HealthCheckUseCase({"postgresql": _ok, "clickhouse": _ok, "kafka": _ok, "redis": _ok, "ollama": _ok})
+
+    return HealthCheckUseCase(
+        {"postgresql": _ok, "clickhouse": _ok, "kafka": _ok, "redis": _ok, "ollama": _ok}
+    )
 
 
 @pytest.fixture
@@ -78,28 +81,34 @@ def client() -> TestClient:
 
 
 # ── engineer は全エンドポイントに 200 ────────────────────
-@pytest.mark.parametrize("path", [
-    "/ops/health",
-    "/ops/kafka/topics",
-    "/ops/kafka/consumer-groups",
-    "/ops/pipeline/jobs",
-    "/ops/scoring/batches",
-    "/ops/schema/tables",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/ops/health",
+        "/ops/kafka/topics",
+        "/ops/kafka/consumer-groups",
+        "/ops/pipeline/jobs",
+        "/ops/scoring/batches",
+        "/ops/schema/tables",
+    ],
+)
 def test_engineer_can_access_ops(client: TestClient, engineer_token: str, path: str) -> None:
     resp = client.get(path, headers={"Authorization": f"Bearer {engineer_token}"})
     assert resp.status_code == 200
 
 
 # ── marketer は全エンドポイントに 403 ────────────────────
-@pytest.mark.parametrize("path", [
-    "/ops/health",
-    "/ops/kafka/topics",
-    "/ops/kafka/consumer-groups",
-    "/ops/pipeline/jobs",
-    "/ops/scoring/batches",
-    "/ops/schema/tables",
-])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/ops/health",
+        "/ops/kafka/topics",
+        "/ops/kafka/consumer-groups",
+        "/ops/pipeline/jobs",
+        "/ops/scoring/batches",
+        "/ops/schema/tables",
+    ],
+)
 def test_marketer_cannot_access_ops(client: TestClient, marketer_token: str, path: str) -> None:
     resp = client.get(path, headers={"Authorization": f"Bearer {marketer_token}"})
     assert resp.status_code == 403

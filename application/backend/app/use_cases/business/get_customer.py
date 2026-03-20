@@ -15,7 +15,7 @@ def _cache_key(unified_id: int) -> str:
 
 def _to_json(customer: UnifiedCustomer) -> str:
     def _default(obj: object) -> str:
-        if isinstance(obj, (date, datetime)):
+        if isinstance(obj, date | datetime):
             return obj.isoformat()
         raise TypeError(f"Not serializable: {type(obj)}")
 
@@ -63,7 +63,9 @@ def _from_json(data: str) -> UnifiedCustomer:
         churn_label = ChurnLabel(
             unified_id=cl["unified_id"],
             label=cl["label"],
-            last_purchase_at=datetime.fromisoformat(cl["last_purchase_at"]) if cl["last_purchase_at"] else None,
+            last_purchase_at=datetime.fromisoformat(cl["last_purchase_at"])
+            if cl["last_purchase_at"]
+            else None,
             days_since_purchase=cl["days_since_purchase"],
             updated_at=datetime.fromisoformat(cl["updated_at"]),
         )
@@ -109,6 +111,8 @@ class GetCustomerUseCase:
 
         # キャッシュに書き込み
         if self._cache is not None:
-            await self._cache.set(_cache_key(unified_id), _to_json(customer), ttl_seconds=_CACHE_TTL)
+            await self._cache.set(
+                _cache_key(unified_id), _to_json(customer), ttl_seconds=_CACHE_TTL
+            )
 
         return customer

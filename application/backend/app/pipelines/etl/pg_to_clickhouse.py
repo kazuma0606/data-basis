@@ -79,16 +79,22 @@ async def etl_ec_events(session: AsyncSession, ch, target_date: date) -> int:
         return 0
 
     rows_list = [
-        [str(r[0]), str(r[1]), str(r[2]), str(r[3]),
-         float(r[4]) if r[4] else 0.0, r[5], r[6]]
+        [str(r[0]), str(r[1]), str(r[2]), str(r[3]), float(r[4]) if r[4] else 0.0, r[5], r[6]]
         for r in data
     ]
 
     ch.insert(
         "ec_events",
         rows_list,
-        column_names=["event_id", "customer_id", "event_type",
-                      "product_id", "amount", "event_date", "event_time"],
+        column_names=[
+            "event_id",
+            "customer_id",
+            "event_type",
+            "product_id",
+            "amount",
+            "event_date",
+            "event_time",
+        ],
     )
     log.info(f"ec_events: {len(rows_list)} 行 → ClickHouse ({target_date})")
     return len(rows_list)
@@ -128,16 +134,32 @@ async def etl_pos_transactions(session: AsyncSession, ch, target_date: date) -> 
         return 0
 
     rows_list = [
-        [str(r[0]), str(r[1]), str(r[2]), str(r[3]),
-         int(r[4]), float(r[5]) if r[5] else 0.0, r[6], r[7]]
+        [
+            str(r[0]),
+            str(r[1]),
+            str(r[2]),
+            str(r[3]),
+            int(r[4]),
+            float(r[5]) if r[5] else 0.0,
+            r[6],
+            r[7],
+        ]
         for r in data
     ]
 
     ch.insert(
         "pos_transactions",
         rows_list,
-        column_names=["txn_id", "customer_id", "store_id", "product_id",
-                      "quantity", "amount", "txn_date", "txn_time"],
+        column_names=[
+            "txn_id",
+            "customer_id",
+            "store_id",
+            "product_id",
+            "quantity",
+            "amount",
+            "txn_date",
+            "txn_time",
+        ],
     )
     log.info(f"pos_transactions: {len(rows_list)} 行 → ClickHouse ({target_date})")
     return len(rows_list)
@@ -187,16 +209,30 @@ async def etl_sales_by_channel(session: AsyncSession, ch, target_date: date) -> 
         return 0
 
     rows_list = [
-        [r[0], str(r[1]), int(r[2] or 0), int(r[3] or 0),
-         int(r[4] or 0), int(r[5] or 0), int(r[6] or 0)]
+        [
+            r[0],
+            str(r[1]),
+            int(r[2] or 0),
+            int(r[3] or 0),
+            int(r[4] or 0),
+            int(r[5] or 0),
+            int(r[6] or 0),
+        ]
         for r in data
     ]
 
     ch.insert(
         "sales_by_channel",
         rows_list,
-        column_names=["date", "channel", "store_id", "category_id",
-                      "total_amount", "order_count", "customer_count"],
+        column_names=[
+            "date",
+            "channel",
+            "store_id",
+            "category_id",
+            "total_amount",
+            "order_count",
+            "customer_count",
+        ],
     )
     log.info(f"sales_by_channel: {len(rows_list)} 行 → ClickHouse ({target_date})")
     return len(rows_list)

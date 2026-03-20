@@ -42,13 +42,17 @@ def main(sqlite_path: Path) -> None:
     log.info(f"[{TOPIC}] アプリイベント送信中... ({len(rows)} 件)")
     for row in rows:
         eid, uid, event_type, event_value, ts = row
-        send(producer, TOPIC, {
-            "event_type": f"app_{event_type}",
-            "event_id": eid,
-            "uid": uid,
-            "event_value": event_value,
-            "timestamp": ts,
-        })
+        send(
+            producer,
+            TOPIC,
+            {
+                "event_type": f"app_{event_type}",
+                "event_id": eid,
+                "uid": uid,
+                "event_value": event_value,
+                "timestamp": ts,
+            },
+        )
 
     producer.flush()
     producer.close()

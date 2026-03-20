@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from app.interfaces.clients.kafka_client import KafkaTopic
 from app.use_cases.ops.get_kafka_topics import GetKafkaTopicsUseCase

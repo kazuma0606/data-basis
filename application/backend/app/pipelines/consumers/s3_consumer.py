@@ -15,11 +15,10 @@ LocalStack S3 の s3://technomart-datalake/raw/{topic}/{date}/ に JSONL 形式�
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import boto3
 from botocore.exceptions import ClientError
@@ -87,8 +86,8 @@ def main() -> None:
         log.info(f"  タイムアウト: {CONSUMER_TIMEOUT_MS}ms 間メッセージなし")
 
     # まとめて S3 にアップロード
-    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    ts_str = datetime.now(timezone.utc).strftime("%H%M%S")
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
+    ts_str = datetime.now(UTC).strftime("%H%M%S")
     for topic, records in buffer.items():
         if records:
             s3_key = f"raw/{topic}/{date_str}/{ts_str}.jsonl"

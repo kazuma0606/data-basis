@@ -18,9 +18,7 @@ class KafkaAdminClientImpl:
             request_timeout_ms=5000,
         )
         try:
-            topic_names = sorted(
-                t for t in consumer.topics() if not t.startswith("__")
-            )
+            topic_names = sorted(t for t in consumer.topics() if not t.startswith("__"))
             result: list[KafkaTopic] = []
             for name in topic_names:
                 partitions = consumer.partitions_for_topic(name) or set()
@@ -33,7 +31,9 @@ class KafkaAdminClientImpl:
                         count = sum(end.get(tp, 0) - beg.get(tp, 0) for tp in tps)
                     except Exception:
                         pass
-                result.append(KafkaTopic(name=name, partitions=len(partitions), message_count=count))
+                result.append(
+                    KafkaTopic(name=name, partitions=len(partitions), message_count=count)
+                )
             return result
         finally:
             consumer.close()

@@ -4,16 +4,18 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from app.config import settings
 from app.domain.entities.user import AuthUser
 from app.domain.exceptions import ForbiddenError, UnauthorizedError
-from app.config import settings
 from app.infrastructure.clients.kafka_admin_client import KafkaAdminClientImpl
 from app.infrastructure.clients.ollama_client import OllamaClient
 from app.infrastructure.clients.redis_cache_client import RedisCacheClient
 from app.infrastructure.database.clickhouse import ch_query
 from app.infrastructure.database.postgres import async_session_factory, get_db
 from app.infrastructure.database.redis import get_redis
-from app.infrastructure.repositories.clickhouse_analytics_repository import ClickHouseAnalyticsRepository
+from app.infrastructure.repositories.clickhouse_analytics_repository import (
+    ClickHouseAnalyticsRepository,
+)
 from app.infrastructure.repositories.postgres_customer_repository import PostgresCustomerRepository
 from app.infrastructure.repositories.postgres_job_repository import PostgresJobRepository
 from app.infrastructure.repositories.postgres_product_repository import PostgresProductRepository
@@ -71,6 +73,7 @@ def get_health_check_use_case(
     async def check_postgresql() -> None:
         async with async_session_factory() as session:
             from sqlalchemy import text
+
             await session.execute(text("SELECT 1"))
 
     async def check_clickhouse() -> None:
@@ -85,20 +88,24 @@ def get_health_check_use_case(
 
     async def check_ollama() -> None:
         import httpx
+
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(f"{settings.ollama_base_url}/api/tags")
             resp.raise_for_status()
 
-    return HealthCheckUseCase({
-        "postgresql": check_postgresql,
-        "clickhouse": check_clickhouse,
-        "kafka": check_kafka,
-        "redis": check_redis,
-        "ollama": check_ollama,
-    })
+    return HealthCheckUseCase(
+        {
+            "postgresql": check_postgresql,
+            "clickhouse": check_clickhouse,
+            "kafka": check_kafka,
+            "redis": check_redis,
+            "ollama": check_ollama,
+        }
+    )
 
 
 # ── Business: 顧客・分析・LLM ─────────────────────────────
+
 
 def get_customer_repository(
     db: Annotated[AsyncSession, Depends(get_db)],

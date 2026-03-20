@@ -1,9 +1,9 @@
-from datetime import date, timedelta
+from datetime import date
+from typing import Any
 
 from app.infrastructure.database.clickhouse import ch_query
 from app.interfaces.repositories.analytics_repository import (
     CategoryAffinity,
-    IAnalyticsRepository,
     SalesByChannel,
     SegmentCount,
     SegmentTrend,
@@ -33,7 +33,9 @@ class ClickHouseAnalyticsRepository:
         )
         return [
             SegmentTrend(
-                week=r["week"] if isinstance(r["week"], date) else date.fromisoformat(str(r["week"])),
+                week=r["week"]
+                if isinstance(r["week"], date)
+                else date.fromisoformat(str(r["week"])),
                 label=r["label"],
                 customer_count=int(r["customer_count"]),
                 avg_days_since_purchase=float(r["avg_days_since_purchase"]),
@@ -52,7 +54,7 @@ class ClickHouseAnalyticsRepository:
             FROM sales_by_channel
             WHERE date >= today() - toIntervalDay({days:UInt32})
         """
-        params: dict = {"days": days}
+        params: dict[str, Any] = {"days": days}
         if store_id is not None:
             base_query += " AND store_id = {store_id:Int32}"
             params["store_id"] = store_id
@@ -61,7 +63,9 @@ class ClickHouseAnalyticsRepository:
         rows = await ch_query(base_query, parameters=params)
         return [
             SalesByChannel(
-                date=r["date"] if isinstance(r["date"], date) else date.fromisoformat(str(r["date"])),
+                date=r["date"]
+                if isinstance(r["date"], date)
+                else date.fromisoformat(str(r["date"])),
                 channel=r["channel"],
                 store_id=r["store_id"],
                 category_id=r["category_id"],
@@ -82,7 +86,7 @@ class ClickHouseAnalyticsRepository:
             FROM category_affinity_summary
             WHERE week >= today() - toIntervalWeek({weeks:UInt32})
         """
-        params: dict = {"weeks": weeks}
+        params: dict[str, Any] = {"weeks": weeks}
         if category_id is not None:
             base_query += " AND category_id = {category_id:Int32}"
             params["category_id"] = category_id
@@ -91,7 +95,9 @@ class ClickHouseAnalyticsRepository:
         rows = await ch_query(base_query, parameters=params)
         return [
             CategoryAffinity(
-                week=r["week"] if isinstance(r["week"], date) else date.fromisoformat(str(r["week"])),
+                week=r["week"]
+                if isinstance(r["week"], date)
+                else date.fromisoformat(str(r["week"])),
                 category_id=int(r["category_id"]),
                 age_group=r["age_group"],
                 gender=r["gender"],

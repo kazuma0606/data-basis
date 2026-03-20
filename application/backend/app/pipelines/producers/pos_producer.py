@@ -63,14 +63,18 @@ def produce_store_visits(conn: sqlite3.Connection, producer) -> int:
 
     for row in rows:
         vid, mid, sid, visited_at, duration = row
-        send(producer, TOPIC, {
-            "event_type": "pos_store_visit",
-            "visit_id": vid,
-            "member_id": mid,
-            "store_id": sid,
-            "visited_at": visited_at,
-            "duration_min": duration,
-        })
+        send(
+            producer,
+            TOPIC,
+            {
+                "event_type": "pos_store_visit",
+                "visit_id": vid,
+                "member_id": mid,
+                "store_id": sid,
+                "visited_at": visited_at,
+                "duration_min": duration,
+            },
+        )
 
     return len(rows)
 

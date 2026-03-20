@@ -26,8 +26,8 @@ from app.presentation.schemas.ops import (
 from app.use_cases.ops.get_consumer_groups import GetConsumerGroupsUseCase
 from app.use_cases.ops.get_kafka_topics import GetKafkaTopicsUseCase
 from app.use_cases.ops.get_pipeline_jobs import GetPipelineJobsUseCase
-from app.use_cases.ops.get_scoring_batches import GetScoringBatchesUseCase
 from app.use_cases.ops.get_schema_tables import GetSchemaTablesUseCase
+from app.use_cases.ops.get_scoring_batches import GetScoringBatchesUseCase
 from app.use_cases.ops.health_check import HealthCheckUseCase
 
 router = APIRouter(prefix="/ops", tags=["ops"])
@@ -44,8 +44,10 @@ async def health(
     result = await use_case.execute()
     return HealthResponse(
         overall=result.overall,
-        services=[ServiceHealthSchema(name=s.name, status=s.status, error=s.error)
-                  for s in result.services],
+        services=[
+            ServiceHealthSchema(name=s.name, status=s.status, error=s.error)
+            for s in result.services
+        ],
     )
 
 
@@ -55,8 +57,10 @@ async def kafka_topics(
     kafka: Annotated[IKafkaAdminClient, Depends(get_kafka_admin_client)],
 ) -> list[TopicInfoSchema]:
     topics = await GetKafkaTopicsUseCase(kafka).execute()
-    return [TopicInfoSchema(name=t.name, partitions=t.partitions, message_count=t.message_count)
-            for t in topics]
+    return [
+        TopicInfoSchema(name=t.name, partitions=t.partitions, message_count=t.message_count)
+        for t in topics
+    ]
 
 
 @router.get("/kafka/consumer-groups", response_model=list[ConsumerGroupSchema])

@@ -4,6 +4,7 @@ Integration tests — VM上の Ollama が起動している場合のみ実行。
 実行方法:
     uv run python -m pytest -m integration tests/integration/
 """
+
 import pytest
 
 from app.infrastructure.clients.ollama_client import OllamaClient

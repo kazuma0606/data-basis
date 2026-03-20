@@ -1,0 +1,25 @@
+# gitleaks 設定ファイル
+# ローカル開発環境固有のダミー値を false positive として除外する
+
+title = "Technomart gitleaks config"
+
+[allowlist]
+  description = "Known dummy credentials for local development (LocalStack / k8s dev manifests)"
+
+  # ファイル単位の除外（証明書・鍵は .gitignore 管理に移行済み）
+  paths = [
+    '''\.gitleaks\.toml''',
+  ]
+
+  # パターン単位の除外
+  regexes = [
+    # Terraform LocalStack 固定値
+    '''access_key\s*=\s*["']test["']''',
+    '''secret_key\s*=\s*["']test["']''',
+
+    # k8s manifest / Python config のデフォルト値
+    '''AWS_ACCESS_KEY_ID[:\s=]+["']?test["']?''',
+    '''AWS_SECRET_ACCESS_KEY[:\s=]+["']?test["']?''',
+    '''aws_access_key_id\s*:\s*str\s*=\s*["']test["']''',
+    '''aws_secret_access_key\s*:\s*str\s*=\s*["']test["']''',
+  ]

@@ -23,17 +23,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import select, text, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
-from app.pipelines.cleansing.birthdate import normalize_birthdate
-from app.pipelines.cleansing.name import normalize_name
-from app.pipelines.cleansing.phone import normalize_phone
-from app.pipelines.cleansing.prefecture import normalize_prefecture
-from app.pipelines.deduplication.matcher import match as do_match
 from app.infrastructure.database.models import (
     CustomerIdMapModel,
     PipelineJobModel,
@@ -42,19 +39,25 @@ from app.infrastructure.database.models import (
     StagingPosMemberModel,
     UnifiedCustomerModel,
 )
+from app.pipelines.cleansing.birthdate import normalize_birthdate
+from app.pipelines.cleansing.name import normalize_name
+from app.pipelines.cleansing.phone import normalize_phone
+from app.pipelines.cleansing.prefecture import normalize_prefecture
+from app.pipelines.deduplication.matcher import match as do_match
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-NOW = datetime.now(timezone.utc).replace(tzinfo=None)
+NOW = datetime.now(UTC).replace(tzinfo=None)
 
 
 # ── クレンジング済み中間表現 ───────────────────────────────────────
 
+
 class CleanedRecord:
     def __init__(
         self,
-        source: str,         # "ec" | "pos" | "app"
+        source: str,  # "ec" | "pos" | "app"
         source_id: str,
         name: str | None,
         name_kana: str | None,
@@ -80,6 +83,7 @@ class CleanedRecord:
 
 
 # ── クレンジング処理 ─────────────────────────────────────────────
+
 
 def clean_ec(row: StagingEcCustomerModel) -> CleanedRecord:
     bd = normalize_birthdate(row.birth_date)
@@ -117,6 +121,7 @@ def clean_pos(row: StagingPosMemberModel) -> CleanedRecord:
 
 def clean_app(row: StagingAppUserModel) -> CleanedRecord:
     from app.pipelines.cleansing.name import is_kana_only
+
     raw_name = normalize_name(row.name)
     # カナのみ（姓のみ）はマッチングには使わない
     name = None if is_kana_only(raw_name) else raw_name
@@ -137,7 +142,8 @@ def clean_app(row: StagingAppUserModel) -> CleanedRecord:
 
 # ── DB 操作 ─────────────────────────────────────────────────────
 
-async def load_unified_customers(session: AsyncSession) -> list[dict]:
+
+async def load_unified_customers(session: AsyncSession) -> list[dict[str, Any]]:
     """unified_customers を全件ロードしてマッチング用辞書のリストを返す。"""
     result = await session.execute(
         select(
@@ -177,6 +183,7 @@ async def insert_unified(session: AsyncSession, rec: CleanedRecord) -> int:
     """unified_customers に新規レコードを INSERT し unified_id を返す。"""
     # birth_date 文字列 → date オブジェクト
     from datetime import date as DateType
+
     bd = None
     if rec.birth_date:
         try:
@@ -197,7 +204,7 @@ async def insert_unified(session: AsyncSession, rec: CleanedRecord) -> int:
     )
     session.add(obj)
     await session.flush()  # unified_id を取得するために flush
-    return obj.unified_id
+    return int(obj.unified_id)
 
 
 async def insert_mapping(
@@ -224,17 +231,16 @@ async def insert_mapping(
 
 async def mark_staging_processed(
     session: AsyncSession,
-    model_cls: type,
+    model_cls: type[Any],
     row_id: int,
 ) -> None:
     await session.execute(
-        update(model_cls)
-        .where(model_cls.id == row_id)
-        .values(processed=True, processed_at=NOW)
+        update(model_cls).where(model_cls.id == row_id).values(processed=True, processed_at=NOW)
     )
 
 
 # ── バッチメイン ─────────────────────────────────────────────────
+
 
 async def run_batch(mode: str) -> None:
     engine = create_async_engine(settings.postgres_url, echo=False)
@@ -263,14 +269,14 @@ async def run_batch(mode: str) -> None:
             log.info(f"  {len(existing_customers)} 件の既存顧客を読み込みました")
 
             # 各ステージングテーブルから未処理レコードを取得
-            staging_sources: list[tuple[str, type, callable]] = [
-                ("ec",  StagingEcCustomerModel,  clean_ec),
-                ("pos", StagingPosMemberModel,   clean_pos),
-                ("app", StagingAppUserModel,     clean_app),
+            staging_sources: list[tuple[str, type[Any], Callable[..., Any]]] = [
+                ("ec", StagingEcCustomerModel, clean_ec),
+                ("pos", StagingPosMemberModel, clean_pos),
+                ("app", StagingAppUserModel, clean_app),
             ]
 
             for source_name, model_cls, cleaner in staging_sources:
-                q = select(model_cls).where(model_cls.processed == False)
+                q = select(model_cls).where(model_cls.processed.is_(False))
                 result = await session.execute(q)
                 rows = result.scalars().all()
 
@@ -292,7 +298,7 @@ async def run_batch(mode: str) -> None:
                         match_method: str | None = None
 
                         for existing in existing_customers:
-                            result = do_match(
+                            match_result = do_match(
                                 new_email=rec.email,
                                 new_phone=rec.phone,
                                 new_name=rec.name,
@@ -302,27 +308,31 @@ async def run_batch(mode: str) -> None:
                                 existing_name=existing["name"],
                                 existing_birthdate=existing["birth_date"],
                             )
-                            if result.matched:
+                            if match_result.matched:
                                 matched_uid = existing["unified_id"]
-                                match_method = result.method
+                                match_method = match_result.method
                                 break
 
                         if matched_uid is not None:
                             # マッチ → 対応関係を追加
-                            await insert_mapping(session, matched_uid, rec.source, rec.source_id, match_method)
+                            await insert_mapping(
+                                session, matched_uid, rec.source, rec.source_id, match_method
+                            )
                             matched += 1
                         else:
                             # 非マッチ → 新規顧客として登録
                             new_uid = await insert_unified(session, rec)
                             await insert_mapping(session, new_uid, rec.source, rec.source_id, "new")
                             # メモリ上の既存顧客リストに追加（後続レコードのマッチング対象）
-                            existing_customers.append({
-                                "unified_id": new_uid,
-                                "name": rec.name,
-                                "email": rec.email,
-                                "phone": rec.phone,
-                                "birth_date": rec.birth_date,
-                            })
+                            existing_customers.append(
+                                {
+                                    "unified_id": new_uid,
+                                    "name": rec.name,
+                                    "email": rec.email,
+                                    "phone": rec.phone,
+                                    "birth_date": rec.birth_date,
+                                }
+                            )
                             created += 1
 
                         await mark_staging_processed(session, model_cls, rec.staging_row_id)
@@ -337,7 +347,7 @@ async def run_batch(mode: str) -> None:
                 .where(PipelineJobModel.id == job_id)
                 .values(
                     status="success",
-                    finished_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    finished_at=datetime.now(UTC).replace(tzinfo=None),
                     records_processed=processed,
                 )
             )
@@ -349,16 +359,14 @@ async def run_batch(mode: str) -> None:
                 .where(PipelineJobModel.id == job_id)
                 .values(
                     status="failed",
-                    finished_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    finished_at=datetime.now(UTC).replace(tzinfo=None),
                     error_message=str(e)[:500],
                 )
             )
             await session.commit()
             raise
 
-    log.info(
-        f"バッチ完了: 処理={processed} マッチ={matched} 新規={created} エラー={errors}"
-    )
+    log.info(f"バッチ完了: 処理={processed} マッチ={matched} 新規={created} エラー={errors}")
 
     await engine.dispose()
 

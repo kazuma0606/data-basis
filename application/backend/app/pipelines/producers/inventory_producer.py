@@ -42,15 +42,19 @@ def main(sqlite_path: Path) -> None:
     log.info(f"[{TOPIC}] 商品マスタ送信中... ({len(rows)} 件)")
     for row in rows:
         pid, cat_id, name, brand, price, is_active = row
-        send(producer, TOPIC, {
-            "event_type": "inventory_snapshot",
-            "product_id": pid,
-            "category_id": cat_id,
-            "name": name,
-            "brand": brand,
-            "price": price,
-            "is_active": bool(is_active),
-        })
+        send(
+            producer,
+            TOPIC,
+            {
+                "event_type": "inventory_snapshot",
+                "product_id": pid,
+                "category_id": cat_id,
+                "name": name,
+                "brand": brand,
+                "price": price,
+                "is_active": bool(is_active),
+            },
+        )
 
     producer.flush()
     producer.close()

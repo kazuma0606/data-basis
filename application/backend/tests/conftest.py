@@ -9,9 +9,7 @@ os.environ.setdefault("CLICKHOUSE_PASSWORD", "technomart")
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_user_repository
 from app.main import app
-
 
 # ── 共通フィクスチャ ──────────────────────────────────────────
 

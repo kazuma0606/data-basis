@@ -1,7 +1,7 @@
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
-from unittest.mock import AsyncMock
 
 from app.interfaces.repositories.job_repository import ScoringBatch
 from app.use_cases.ops.get_scoring_batches import GetScoringBatchesUseCase

@@ -43,9 +43,7 @@ async def ensure_embedding_column(session: AsyncSession) -> None:
         """)
     )
     if result.fetchone() is None:
-        await session.execute(
-            text("ALTER TABLE unified_products ADD COLUMN embedding vector(768)")
-        )
+        await session.execute(text("ALTER TABLE unified_products ADD COLUMN embedding vector(768)"))
         await session.commit()
         log.info("unified_products.embedding カラムを追加しました")
     else:
