@@ -36,7 +36,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // For /auth/login: redirect already-authenticated users to their home
-  if (pathname.startsWith("/auth/login") || pathname.startsWith("/api/auth/signin")) {
+  if (pathname.startsWith("/auth/login")) {
     const token = req.cookies.get(SESSION_COOKIE)?.value;
     if (token) {
       const user = await authProvider.verifyToken(token);
@@ -45,6 +45,22 @@ export async function middleware(req: NextRequest) {
         homeUrl.pathname = ROLE_HOME[user.role];
         homeUrl.search = "";
         return NextResponse.redirect(homeUrl);
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // For /api/auth/signin: already-authenticated users get a JSON error (not a redirect)
+  // Redirect would cause fetch() to receive HTML and crash with "ネットワークエラー"
+  if (pathname.startsWith("/api/auth/signin")) {
+    const token = req.cookies.get(SESSION_COOKIE)?.value;
+    if (token) {
+      const user = await authProvider.verifyToken(token);
+      if (user) {
+        return NextResponse.json(
+          { error: `既に ${user.username} としてログインされています。別のアカウントでログインするには、先にサインアウトしてください。` },
+          { status: 409 }
+        );
       }
     }
     return NextResponse.next();

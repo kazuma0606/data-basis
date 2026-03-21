@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Database, User, LogOut, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,13 +21,16 @@ export function OpsHeader({ username }: OpsHeaderProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
 
-  const currentTime = new Date().toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const [currentTime, setCurrentTime] = useState<string>("");
+  useEffect(() => {
+    const fmt = () => new Date().toLocaleString("ja-JP", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit",
+    });
+    setCurrentTime(fmt());
+    const id = setInterval(() => setCurrentTime(fmt()), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);

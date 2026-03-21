@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,6 +20,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { Role } from "@/lib/auth/types";
 import { ROLE_HOME } from "@/lib/auth/routes";
+import {
+  AUTH_CHANNEL,
+  SESSION_USER_ID_KEY,
+  SESSION_USERNAME_KEY,
+} from "@/components/auth/SessionGuard";
 
 // ── バリデーションスキーマ ─────────────────────────────────────────────────
 
@@ -28,6 +34,27 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+// ── セッション置き換え警告（useSearchParams は Suspense 内で使う必要がある） ──
+
+function SessionReplacedBanner() {
+  const searchParams = useSearchParams();
+  const replacedBy = searchParams.get("reason") === "session_replaced"
+    ? searchParams.get("by")
+    : null;
+
+  if (!replacedBy) return null;
+
+  return (
+    <div
+      role="alert"
+      className="rounded-md border border-yellow-500/50 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-400"
+    >
+      別のアカウント（{replacedBy}）でログインされたため、サインアウトしました。
+      再度ログインしてください。
+    </div>
+  );
+}
 
 // ── コンポーネント ─────────────────────────────────────────────────────────
 
@@ -60,6 +87,18 @@ export default function LoginPage() {
         return;
       }
 
+      // sessionStorage にログインユーザーを記録（SessionGuard がタブ間の差異を検知するため）
+      const { userId, username } = data.user ?? {};
+      if (userId != null && username) {
+        sessionStorage.setItem(SESSION_USER_ID_KEY, String(userId));
+        sessionStorage.setItem(SESSION_USERNAME_KEY, username);
+
+        // 他タブに通知（別ユーザーに切り替わったタブをログイン画面へ戻す）
+        const channel = new BroadcastChannel(AUTH_CHANNEL);
+        channel.postMessage({ type: "login", userId, username });
+        channel.close();
+      }
+
       // ロール別リダイレクト
       const role = data.user?.role as Role | undefined;
       const destination = role ? ROLE_HOME[role] : "/auth/login";
@@ -84,6 +123,11 @@ export default function LoginPage() {
             Data Platform
           </Badge>
         </div>
+
+        {/* セッション置き換えの警告 */}
+        <Suspense fallback={null}>
+          <SessionReplacedBanner />
+        </Suspense>
 
         {/* ログインカード */}
         <Card className="border-border bg-card">
