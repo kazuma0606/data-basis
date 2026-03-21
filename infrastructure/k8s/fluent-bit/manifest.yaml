@@ -47,6 +47,14 @@ data:
         compression             gzip
         content_type            application/x-gzip
 
+    [OUTPUT]
+        Name                    loki
+        Match                   kube.*
+        Host                    loki.monitoring.svc.cluster.local
+        Port                    3100
+        Labels                  job=fluent-bit
+        Auto_Kubernetes_Labels  on
+
   parsers.conf: |
     [PARSER]
         Name        cri

@@ -1,0 +1,75 @@
+{
+  "title": "ログ概要",
+  "uid": "logs-overview",
+  "schemaVersion": 38,
+  "tags": ["technomart", "logs", "loki"],
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "エラーログ一覧（直近 1h）",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 0},
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "targets": [{
+        "expr": "{namespace=\"technomart\"} |= \"error\"",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 2,
+      "title": "サービス別ログ量推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "targets": [{
+        "expr": "sum by (app) (rate({namespace=\"technomart\"}[5m]))",
+        "legendFormat": "{{app}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "reqps"}}
+    },
+    {
+      "id": 3,
+      "title": "バッチジョブ完了ログ",
+      "type": "logs",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 10},
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "targets": [{
+        "expr": "{namespace=\"technomart\", app=\"backend\"} |= \"job_completed\"",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      }
+    },
+    {
+      "id": 4,
+      "title": "全ログストリーム（リアルタイム）",
+      "type": "logs",
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 18},
+      "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+      "targets": [{
+        "expr": "{namespace=\"technomart\"}",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false,
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

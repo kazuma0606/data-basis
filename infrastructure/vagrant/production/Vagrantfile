@@ -21,8 +21,16 @@ Vagrant.configure("2") do |config|
     vb.name   = "technomart-ubuntu"
     vb.cpus   = 10
     vb.memory = 49152  # 48GB
+    # v1.3.1 RAM 計測結果 (2026-03-21):
+    #   アイドル ~4.1GB / Ollama ロード済みピーク ~6.4GB
+    #   推奨最小: 12288 (12GB) / 開発推奨: 16384 (16GB)
+    #   このホストは 128GB RAM のため現状 48GB 割り当てを維持
 
     vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+    # ディスク注意: bento/ubuntu-24.04 の LVM は初期 31GB のみ割り当て
+    # v1.3.1 で containerd 画像 16GB + PVC でディスク逼迫 → LV を 62GB に拡張済み (2026-03-21)
+    # 拡張手順: sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv && sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
+    # 次回 VM 再作成時は provision.sh にこの手順を追加すること
   end
 
   # リポジトリ全体を VM 内に共有（ホストで編集 → VM に即時反映）
