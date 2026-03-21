@@ -24,6 +24,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import settings
+from app.shared.metrics import push_batch_metrics
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -118,9 +119,11 @@ async def main_async() -> None:
     engine = create_async_engine(settings.postgres_url, echo=False)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async with factory() as session:
-        await ensure_embedding_column(session)
-        count = await run_batch(session)
+    with push_batch_metrics("product_embeddings") as bm:
+        async with factory() as session:
+            await ensure_embedding_column(session)
+            count = await run_batch(session)
+        bm.records_processed = count
 
     await engine.dispose()
     log.info(f"完了: {count} 件の Embedding を格納")

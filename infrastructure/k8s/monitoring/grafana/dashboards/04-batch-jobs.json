@@ -1,0 +1,75 @@
+{
+  "title": "バッチジョブ実行状況",
+  "uid": "batch-jobs",
+  "schemaVersion": 38,
+  "tags": ["technomart", "batch"],
+  "refresh": "60s",
+  "time": {"from": "now-24h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "スコアリングバッチ 最終成功",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "time() - job_last_success_timestamp{job=\"scoring_batch\"}",
+        "legendFormat": "経過時間 (秒)"
+      }],
+      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 86400}, {"color": "red", "value": 90000}]}}}
+    },
+    {
+      "id": 2,
+      "title": "名寄せバッチ 最終成功",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+      "targets": [{
+        "expr": "time() - job_last_success_timestamp{job=\"deduplication_batch\"}",
+        "legendFormat": "経過時間 (秒)"
+      }],
+      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 86400}, {"color": "red", "value": 90000}]}}}
+    },
+    {
+      "id": 3,
+      "title": "Embedding バッチ 最終成功",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 0},
+      "targets": [{
+        "expr": "time() - job_last_success_timestamp{job=\"embedding_batch\"}",
+        "legendFormat": "経過時間 (秒)"
+      }],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 4,
+      "title": "バッチ実行時間推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+      "targets": [{
+        "expr": "job_duration_seconds",
+        "legendFormat": "{{job}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "s"}}
+    },
+    {
+      "id": 5,
+      "title": "処理レコード数推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "targets": [{
+        "expr": "job_records_processed",
+        "legendFormat": "{{job}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 6,
+      "title": "k8s CronJob 直近実行状況",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 20},
+      "targets": [{
+        "expr": "kube_job_status_succeeded{namespace=\"technomart\"}",
+        "legendFormat": "{{job_name}}"
+      }]
+    }
+  ]
+}

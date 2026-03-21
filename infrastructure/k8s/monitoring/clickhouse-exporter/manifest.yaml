@@ -1,40 +1,178 @@
 ---
-# ClickHouse 24.8 組み込み Prometheus エンドポイントを有効化する
-# /etc/clickhouse-server/config.d/prometheus.xml をマウントして port 9363 を開放する
+# ClickHouse カスタム Prometheus エクスポーター
+#
+# ClickHouse の HTTP API (port 8123) を定期クエリして
+# system.metrics / system.asynchronous_metrics を Prometheus 形式で返す。
+# ClickHouse 側の設定変更は一切不要。
+#
+# 公開メトリクス:
+#   clickhouse_up                       - 死活（1=UP, 0=DOWN）
+#   clickhouse_metric{name="..."}       - system.metrics の全項目
+#   clickhouse_async_metric{name="..."} - system.asynchronous_metrics の全項目
+#
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: clickhouse-prometheus-config
-  namespace: technomart
+  name: clickhouse-exporter-script
+  namespace: monitoring
 data:
-  prometheus.xml: |
-    <clickhouse>
-        <http_handlers>
-            <!-- デフォルトの /ping ハンドラを維持（Readiness Probe 用） -->
-            <rule>
-                <url>/ping</url>
-                <methods>GET</methods>
-                <handler>
-                    <type>ping</type>
-                </handler>
-            </rule>
-            <!-- Prometheus メトリクスエンドポイント -->
-            <rule>
-                <url>/metrics</url>
-                <methods>GET</methods>
-                <handler>
-                    <type>prometheus</type>
-                    <metrics>true</metrics>
-                    <events>true</events>
-                    <asynchronous_metrics>true</asynchronous_metrics>
-                </handler>
-            </rule>
-            <!-- その他のリクエストはデフォルト処理 -->
-            <rule>
-                <handler>
-                    <type>dynamic_query_handler</type>
-                    <query_param_name>query</query_param_name>
-                </handler>
-            </rule>
-        </http_handlers>
-    </clickhouse>
+  exporter.py: |
+    #!/usr/bin/env python3
+    """
+    ClickHouse Prometheus Exporter
+    ClickHouse HTTP API (system.metrics / system.asynchronous_metrics) を
+    ポーリングして Prometheus 形式で /metrics に公開する。
+    """
+    import json
+    import logging
+    import os
+    import time
+
+    import httpx
+    from prometheus_client import start_http_server
+    from prometheus_client.core import GaugeMetricFamily, REGISTRY
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    log = logging.getLogger(__name__)
+
+    CLICKHOUSE_URL = os.getenv(
+        "CLICKHOUSE_URL",
+        "http://clickhouse.technomart.svc.cluster.local:8123/",
+    )
+    CLICKHOUSE_USER = os.getenv("CLICKHOUSE_USER", "technomart")
+    CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD", "")
+    SCRAPE_INTERVAL = int(os.getenv("SCRAPE_INTERVAL", "15"))
+    PORT = int(os.getenv("METRICS_PORT", "9363"))
+
+
+    class ClickHouseCollector:
+        def collect(self):
+            up = GaugeMetricFamily(
+                "clickhouse_up",
+                "1 if ClickHouse is reachable, 0 otherwise",
+            )
+            try:
+                auth = (CLICKHOUSE_USER, CLICKHOUSE_PASSWORD)
+                with httpx.Client(timeout=10, auth=auth) as client:
+                    # system.metrics
+                    r1 = client.get(
+                        CLICKHOUSE_URL,
+                        params={"query": "SELECT metric, value FROM system.metrics FORMAT JSONEachRow"},
+                    )
+                    r1.raise_for_status()
+
+                    # system.asynchronous_metrics
+                    r2 = client.get(
+                        CLICKHOUSE_URL,
+                        params={"query": "SELECT metric, value FROM system.asynchronous_metrics FORMAT JSONEachRow"},
+                    )
+                    r2.raise_for_status()
+
+                up.add_metric([], 1.0)
+                yield up
+
+                # system.metrics
+                g1 = GaugeMetricFamily(
+                    "clickhouse_metric",
+                    "ClickHouse system.metrics value",
+                    labels=["name"],
+                )
+                for line in r1.text.strip().splitlines():
+                    if not line:
+                        continue
+                    row = json.loads(line)
+                    g1.add_metric([row["metric"]], float(row["value"]))
+                yield g1
+
+                # system.asynchronous_metrics
+                g2 = GaugeMetricFamily(
+                    "clickhouse_async_metric",
+                    "ClickHouse system.asynchronous_metrics value",
+                    labels=["name"],
+                )
+                for line in r2.text.strip().splitlines():
+                    if not line:
+                        continue
+                    row = json.loads(line)
+                    g2.add_metric([row["metric"]], float(row["value"]))
+                yield g2
+
+            except Exception as exc:
+                log.warning("ClickHouse scrape failed: %s", exc)
+                up.add_metric([], 0.0)
+                yield up
+
+
+    if __name__ == "__main__":
+        REGISTRY.register(ClickHouseCollector())
+        start_http_server(PORT)
+        log.info("ClickHouse exporter started on :%d (target: %s)", PORT, CLICKHOUSE_URL)
+        while True:
+            time.sleep(SCRAPE_INTERVAL)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse-exporter
+  template:
+    metadata:
+      labels:
+        app: clickhouse-exporter
+    spec:
+      containers:
+        - name: exporter
+          image: python:3.12-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - pip install --quiet prometheus-client httpx && python /scripts/exporter.py
+          env:
+            - name: CLICKHOUSE_URL
+              value: "http://clickhouse.technomart.svc.cluster.local:8123/"
+            - name: CLICKHOUSE_USER
+              value: "technomart"
+            - name: CLICKHOUSE_PASSWORD
+              value: "technomart"
+            - name: METRICS_PORT
+              value: "9363"
+            - name: SCRAPE_INTERVAL
+              value: "15"
+          ports:
+            - containerPort: 9363
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: 9363
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: clickhouse-exporter-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse-exporter
+  namespace: monitoring
+spec:
+  selector:
+    app: clickhouse-exporter
+  ports:
+    - port: 9363
+      targetPort: 9363

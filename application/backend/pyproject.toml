@@ -28,6 +28,10 @@ dependencies = [
     "structlog>=24.4",
     # S3（LocalStack）
     "boto3>=1.35",
+    # Prometheus メトリクス送信（Pushgateway 経由）
+    "prometheus-client>=0.21",
+    # FastAPI Prometheus インストルメンテーション（/metrics エンドポイント）
+    "prometheus-fastapi-instrumentator>=7.0",
 ]
 
 [dependency-groups]

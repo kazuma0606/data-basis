@@ -1,0 +1,53 @@
+{
+  "title": "Kafka パイプライン",
+  "uid": "kafka-pipeline",
+  "schemaVersion": 38,
+  "tags": ["technomart", "kafka"],
+  "refresh": "30s",
+  "time": {"from": "now-1h", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Consumer Lag (全グループ)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "sum(kafka_consumer_group_lag)",
+        "legendFormat": "Total Lag"
+      }],
+      "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 1000}, {"color": "red", "value": 10000}]}}}
+    },
+    {
+      "id": 2,
+      "title": "トピック数",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+      "targets": [{
+        "expr": "count(kafka_topic_partitions)",
+        "legendFormat": "Topics"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Consumer Lag 推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+      "targets": [{
+        "expr": "kafka_consumer_group_lag",
+        "legendFormat": "{{consumergroup}} / {{topic}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    },
+    {
+      "id": 4,
+      "title": "Topic Offset 推移",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12},
+      "targets": [{
+        "expr": "rate(kafka_topic_partition_current_offset[5m])",
+        "legendFormat": "{{topic}} / partition {{partition}}"
+      }],
+      "fieldConfig": {"defaults": {"unit": "short"}}
+    }
+  ]
+}
