@@ -79,13 +79,13 @@ data:
       - name: disk
         rules:
           - alert: DiskPressureWarning
-            expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.85
+            expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.80
             for: 5m
             labels:
               severity: warning
             annotations:
-              summary: "Disk usage above 85%"
-              description: "Node disk usage is {{ $value | humanizePercentage }}"
+              summary: "Disk usage above 80%"
+              description: "Node disk usage is {{ $value | humanizePercentage }}. Run: sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv && sudo resize2fs /dev/ubuntu-vg/ubuntu-lv"
 
           - alert: DiskPressureCritical
             expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} > 0.95

@@ -106,13 +106,20 @@ spec:
               memory: 1Gi
           volumeMounts:
             - name: config
-              mountPath: /etc/prometheus
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: alert-rules
+              mountPath: /etc/prometheus/alert-rules.yml
+              subPath: alert-rules.yml
             - name: data
               mountPath: /prometheus
       volumes:
         - name: config
           configMap:
             name: prometheus-config
+        - name: alert-rules
+          configMap:
+            name: prometheus-alert-rules
         - name: data
           persistentVolumeClaim:
             claimName: prometheus-pvc
