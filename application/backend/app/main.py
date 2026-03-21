@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.domain.exceptions import ForbiddenError, NotFoundError, UnauthorizedError
 from app.presentation.middleware.auth_middleware import AuthMiddleware
@@ -53,6 +54,10 @@ app.include_router(auth_router.router)
 app.include_router(users_router.router)
 app.include_router(ops_router.router)
 app.include_router(business_router.router)
+
+
+# ── Prometheus メトリクス ─────────────────────────────────
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 # ── ヘルスチェック ────────────────────────────────────────

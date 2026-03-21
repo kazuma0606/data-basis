@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import settings
 from app.scoring import inventory_sync
+from app.shared.metrics import push_batch_metrics
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -612,89 +613,92 @@ async def main_async(mode: str) -> None:
     run_date = date.today()
     now = datetime.utcnow()
 
-    async with factory() as session:
-        # ── 在庫同期（unified_products が空なら実行） ──
-        count_row = await session.execute(text("SELECT COUNT(*) FROM unified_products"))
-        prod_count = count_row.scalar()
-        if prod_count == 0:
-            log.info("unified_products が空のため在庫同期を実行...")
-            await inventory_sync.run(session)
-        else:
-            log.info(f"unified_products: {prod_count} 件（同期スキップ）")
+    with push_batch_metrics("scoring_batch") as bm:
+        async with factory() as session:
+            # ── 在庫同期（unified_products が空なら実行） ──
+            count_row = await session.execute(text("SELECT COUNT(*) FROM unified_products"))
+            prod_count = count_row.scalar()
+            if prod_count == 0:
+                log.info("unified_products が空のため在庫同期を実行...")
+                await inventory_sync.run(session)
+            else:
+                log.info(f"unified_products: {prod_count} 件（同期スキップ）")
 
-        # ── IDマッピング ──
-        ec_map, pos_map, app_map = await load_id_map(session)
-        prod_cat = await load_product_categories(session)
-        log.info(f"商品カテゴリマップ: {len(prod_cat)} 件")
+            # ── IDマッピング ──
+            ec_map, pos_map, app_map = await load_id_map(session)
+            prod_cat = await load_product_categories(session)
+            log.info(f"商品カテゴリマップ: {len(prod_cat)} 件")
 
-        # ── スコア計算 ──
-        affinity: dict[int, dict[int, float]] = {}
-        churn: dict[int, float] = {}
-        timing: dict[int, float] = {}
-        visit: dict[int, float] = {}
+            # ── スコア計算 ──
+            affinity: dict[int, dict[int, float]] = {}
+            churn: dict[int, float] = {}
+            timing: dict[int, float] = {}
+            visit: dict[int, float] = {}
 
-        if mode in ("daily", "full"):
-            affinity = await compute_category_affinity(session, ec_map, prod_cat)
+            if mode in ("daily", "full"):
+                affinity = await compute_category_affinity(session, ec_map, prod_cat)
 
-        if mode in ("weekly", "full"):
-            churn = await compute_churn_risk(session, ec_map, pos_map)
-            timing = await compute_purchase_timing(session, ec_map, pos_map)
-            visit = await compute_visit_prediction(session, pos_map)
+            if mode in ("weekly", "full"):
+                churn = await compute_churn_risk(session, ec_map, pos_map)
+                timing = await compute_purchase_timing(session, ec_map, pos_map)
+                visit = await compute_visit_prediction(session, pos_map)
 
-        # daily のみの場合は既存の churn/timing/visit を維持するため 0 で初期化しない
-        if mode == "daily" and not churn:
-            # 既存スコアを読み込む
-            ex_rows = await session.execute(
-                text(
-                    "SELECT unified_id, churn_risk_score, timing_score, visit_predict_score"
-                    " FROM customer_scores"
-                )
-            )
-            for uid, cr, ts, vs in ex_rows:
-                churn[uid] = cr
-                timing[uid] = ts
-                visit[uid] = vs
-
-        # ── UPSERT ──
-        if not affinity:
-            log.info("affinity スコアなし（週次モードでは customer_scores の更新はありません）")
-            # weekly モード: churn/timing/visit のみ更新（既存レコードの category は維持）
-            if mode == "weekly":
-                rows_updated = 0
-                for uid in churn:
-                    res = await session.execute(
-                        text("""
-                            UPDATE customer_scores SET
-                                churn_risk_score    = :churn,
-                                timing_score        = :timing,
-                                visit_predict_score = :visit,
-                                updated_at          = :now,
-                                batch_run_date      = :run_date
-                            WHERE unified_id = :uid
-                        """),
-                        {
-                            "churn": churn[uid],
-                            "timing": timing.get(uid, 0.0),
-                            "visit": visit.get(uid, 0.0),
-                            "now": now,
-                            "run_date": run_date,
-                            "uid": uid,
-                        },
+            # daily のみの場合は既存の churn/timing/visit を維持するため 0 で初期化しない
+            if mode == "daily" and not churn:
+                # 既存スコアを読み込む
+                ex_rows = await session.execute(
+                    text(
+                        "SELECT unified_id, churn_risk_score, timing_score, visit_predict_score"
+                        " FROM customer_scores"
                     )
-                    rows_updated += res.rowcount
+                )
+                for uid, cr, ts, vs in ex_rows:
+                    churn[uid] = cr
+                    timing[uid] = ts
+                    visit[uid] = vs
+
+            # ── UPSERT ──
+            if not affinity:
+                log.info("affinity スコアなし（週次モードでは customer_scores の更新はありません）")
+                # weekly モード: churn/timing/visit のみ更新（既存レコードの category は維持）
+                if mode == "weekly":
+                    rows_updated = 0
+                    for uid in churn:
+                        res = await session.execute(
+                            text("""
+                                UPDATE customer_scores SET
+                                    churn_risk_score    = :churn,
+                                    timing_score        = :timing,
+                                    visit_predict_score = :visit,
+                                    updated_at          = :now,
+                                    batch_run_date      = :run_date
+                                WHERE unified_id = :uid
+                            """),
+                            {
+                                "churn": churn[uid],
+                                "timing": timing.get(uid, 0.0),
+                                "visit": visit.get(uid, 0.0),
+                                "now": now,
+                                "run_date": run_date,
+                                "uid": uid,
+                            },
+                        )
+                        rows_updated += res.rowcount
+                    await session.commit()
+                    log.info(f"週次スコア更新: {rows_updated} 行")
+                    bm.records_processed = rows_updated
+            else:
+                total = await upsert_scores(session, affinity, churn, timing, visit, run_date)
                 await session.commit()
-                log.info(f"週次スコア更新: {rows_updated} 行")
-        else:
-            total = await upsert_scores(session, affinity, churn, timing, visit, run_date)
-            await session.commit()
-            log.info(f"customer_scores UPSERT: {total} 行")
+                log.info(f"customer_scores UPSERT: {total} 行")
+                bm.records_processed = total
 
-        # ── Redis キャッシュ ──
-        if affinity:
-            await cache_scores_to_redis(affinity, churn, timing, visit)
+            # ── Redis キャッシュ ──
+            if affinity:
+                await cache_scores_to_redis(affinity, churn, timing, visit)
 
-        # ── ClickHouse 同期 ──
-        await sync_to_clickhouse(session)
+            # ── ClickHouse 同期 ──
+            await sync_to_clickhouse(session)
 
     await engine.dispose()
 

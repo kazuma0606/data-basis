@@ -44,6 +44,7 @@ from app.pipelines.cleansing.name import normalize_name
 from app.pipelines.cleansing.phone import normalize_phone
 from app.pipelines.cleansing.prefecture import normalize_prefecture
 from app.pipelines.deduplication.matcher import match as do_match
+from app.shared.metrics import push_batch_metrics
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -246,125 +247,130 @@ async def run_batch(mode: str) -> None:
     engine = create_async_engine(settings.postgres_url, echo=False)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async with factory() as session:
-        # pipeline_jobs に開始ログを記録
-        job = PipelineJobModel(
-            job_name=f"deduplication_{mode}",
-            status="running",
-            started_at=NOW,
-        )
-        session.add(job)
-        await session.flush()
-        job_id = job.id
+    processed = 0
+    matched = 0
+    created = 0
+    errors = 0
 
-        processed = 0
-        matched = 0
-        created = 0
-        errors = 0
+    with push_batch_metrics(f"deduplication_{mode}") as bm:
+        async with factory() as session:
+            # pipeline_jobs に開始ログを記録
+            job = PipelineJobModel(
+                job_name=f"deduplication_{mode}",
+                status="running",
+                started_at=NOW,
+            )
+            session.add(job)
+            await session.flush()
+            job_id = job.id
 
-        try:
-            # 既存の unified_customers を全件メモリにロード（照合用）
-            log.info("unified_customers を読み込み中...")
-            existing_customers = await load_unified_customers(session)
-            log.info(f"  {len(existing_customers)} 件の既存顧客を読み込みました")
+            try:
+                # 既存の unified_customers を全件メモリにロード（照合用）
+                log.info("unified_customers を読み込み中...")
+                existing_customers = await load_unified_customers(session)
+                log.info(f"  {len(existing_customers)} 件の既存顧客を読み込みました")
 
-            # 各ステージングテーブルから未処理レコードを取得
-            staging_sources: list[tuple[str, type[Any], Callable[..., Any]]] = [
-                ("ec", StagingEcCustomerModel, clean_ec),
-                ("pos", StagingPosMemberModel, clean_pos),
-                ("app", StagingAppUserModel, clean_app),
-            ]
+                # 各ステージングテーブルから未処理レコードを取得
+                staging_sources: list[tuple[str, type[Any], Callable[..., Any]]] = [
+                    ("ec", StagingEcCustomerModel, clean_ec),
+                    ("pos", StagingPosMemberModel, clean_pos),
+                    ("app", StagingAppUserModel, clean_app),
+                ]
 
-            for source_name, model_cls, cleaner in staging_sources:
-                q = select(model_cls).where(model_cls.processed.is_(False))
-                result = await session.execute(q)
-                rows = result.scalars().all()
+                for source_name, model_cls, cleaner in staging_sources:
+                    q = select(model_cls).where(model_cls.processed.is_(False))
+                    result = await session.execute(q)
+                    rows = result.scalars().all()
 
-                log.info(f"[{source_name.upper()}] {len(rows)} 件の未処理レコードを処理します")
+                    log.info(f"[{source_name.upper()}] {len(rows)} 件の未処理レコードを処理します")
 
-                for row in rows:
-                    try:
-                        rec = cleaner(row)
-                        processed += 1
+                    for row in rows:
+                        try:
+                            rec = cleaner(row)
+                            processed += 1
 
-                        # 既存マッピングを確認
-                        existing_uid = await already_mapped(session, rec.source, rec.source_id)
-                        if existing_uid is not None:
+                            # 既存マッピングを確認
+                            existing_uid = await already_mapped(session, rec.source, rec.source_id)
+                            if existing_uid is not None:
+                                await mark_staging_processed(session, model_cls, rec.staging_row_id)
+                                continue
+
+                            # 既存 unified_customers との照合
+                            matched_uid: int | None = None
+                            match_method: str | None = None
+
+                            for existing in existing_customers:
+                                match_result = do_match(
+                                    new_email=rec.email,
+                                    new_phone=rec.phone,
+                                    new_name=rec.name,
+                                    new_birthdate=rec.birth_date,
+                                    existing_email=existing["email"],
+                                    existing_phone=existing["phone"],
+                                    existing_name=existing["name"],
+                                    existing_birthdate=existing["birth_date"],
+                                )
+                                if match_result.matched:
+                                    matched_uid = existing["unified_id"]
+                                    match_method = match_result.method
+                                    break
+
+                            if matched_uid is not None:
+                                # マッチ → 対応関係を追加
+                                await insert_mapping(
+                                    session, matched_uid, rec.source, rec.source_id, match_method
+                                )
+                                matched += 1
+                            else:
+                                # 非マッチ → 新規顧客として登録
+                                new_uid = await insert_unified(session, rec)
+                                await insert_mapping(
+                                    session, new_uid, rec.source, rec.source_id, "new"
+                                )
+                                # メモリ上の既存顧客リストに追加（後続レコードのマッチング対象）
+                                existing_customers.append(
+                                    {
+                                        "unified_id": new_uid,
+                                        "name": rec.name,
+                                        "email": rec.email,
+                                        "phone": rec.phone,
+                                        "birth_date": rec.birth_date,
+                                    }
+                                )
+                                created += 1
+
                             await mark_staging_processed(session, model_cls, rec.staging_row_id)
-                            continue
 
-                        # 既存 unified_customers との照合
-                        matched_uid: int | None = None
-                        match_method: str | None = None
+                        except Exception as e:
+                            log.error(f"  レコード処理エラー ({source_name} id={row.id}): {e}")
+                            errors += 1
 
-                        for existing in existing_customers:
-                            match_result = do_match(
-                                new_email=rec.email,
-                                new_phone=rec.phone,
-                                new_name=rec.name,
-                                new_birthdate=rec.birth_date,
-                                existing_email=existing["email"],
-                                existing_phone=existing["phone"],
-                                existing_name=existing["name"],
-                                existing_birthdate=existing["birth_date"],
-                            )
-                            if match_result.matched:
-                                matched_uid = existing["unified_id"]
-                                match_method = match_result.method
-                                break
-
-                        if matched_uid is not None:
-                            # マッチ → 対応関係を追加
-                            await insert_mapping(
-                                session, matched_uid, rec.source, rec.source_id, match_method
-                            )
-                            matched += 1
-                        else:
-                            # 非マッチ → 新規顧客として登録
-                            new_uid = await insert_unified(session, rec)
-                            await insert_mapping(session, new_uid, rec.source, rec.source_id, "new")
-                            # メモリ上の既存顧客リストに追加（後続レコードのマッチング対象）
-                            existing_customers.append(
-                                {
-                                    "unified_id": new_uid,
-                                    "name": rec.name,
-                                    "email": rec.email,
-                                    "phone": rec.phone,
-                                    "birth_date": rec.birth_date,
-                                }
-                            )
-                            created += 1
-
-                        await mark_staging_processed(session, model_cls, rec.staging_row_id)
-
-                    except Exception as e:
-                        log.error(f"  レコード処理エラー ({source_name} id={row.id}): {e}")
-                        errors += 1
-
-            # pipeline_jobs を完了に更新
-            await session.execute(
-                update(PipelineJobModel)
-                .where(PipelineJobModel.id == job_id)
-                .values(
-                    status="success",
-                    finished_at=datetime.now(UTC).replace(tzinfo=None),
-                    records_processed=processed,
+                # pipeline_jobs を完了に更新
+                await session.execute(
+                    update(PipelineJobModel)
+                    .where(PipelineJobModel.id == job_id)
+                    .values(
+                        status="success",
+                        finished_at=datetime.now(UTC).replace(tzinfo=None),
+                        records_processed=processed,
+                    )
                 )
-            )
-            await session.commit()
+                await session.commit()
 
-        except Exception as e:
-            await session.execute(
-                update(PipelineJobModel)
-                .where(PipelineJobModel.id == job_id)
-                .values(
-                    status="failed",
-                    finished_at=datetime.now(UTC).replace(tzinfo=None),
-                    error_message=str(e)[:500],
+            except Exception as e:
+                await session.execute(
+                    update(PipelineJobModel)
+                    .where(PipelineJobModel.id == job_id)
+                    .values(
+                        status="failed",
+                        finished_at=datetime.now(UTC).replace(tzinfo=None),
+                        error_message=str(e)[:500],
+                    )
                 )
-            )
-            await session.commit()
-            raise
+                await session.commit()
+                raise
+
+        bm.records_processed = processed
 
     log.info(f"バッチ完了: 処理={processed} マッチ={matched} 新規={created} エラー={errors}")
 
