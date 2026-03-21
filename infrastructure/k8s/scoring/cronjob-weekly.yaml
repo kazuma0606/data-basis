@@ -18,7 +18,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: scoring
-              image: 192.168.56.10:5000/technomart-backend:latest
+              image: 192.168.56.10:32500/technomart-backend:latest
               command: ["python3", "-m", "app.scoring.runner", "--mode", "weekly"]
               envFrom:
                 - configMapRef:
