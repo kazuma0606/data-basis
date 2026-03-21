@@ -12,7 +12,7 @@
       "type": "stat",
       "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
       "targets": [{
-        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase=\"Running\"})",
+        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase=\"Running\"} == 1)",
         "legendFormat": "Running"
       }],
       "options": {"colorMode": "background"}
@@ -23,7 +23,7 @@
       "type": "stat",
       "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
       "targets": [{
-        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase!=\"Running\", phase!=\"Succeeded\"})",
+        "expr": "count(kube_pod_status_phase{namespace=\"technomart\", phase!~\"Running|Succeeded\"} == 1) or vector(0)",
         "legendFormat": "Not Running"
       }],
       "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}},
